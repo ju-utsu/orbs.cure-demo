@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Orb Rescue — Minimal A-Frame VR Prototype (with sound & scoring)</title>
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <style>
+    html, body { height: 100%; margin: 0; background: #000; }
+    .instructions {
+      position: fixed; left: 8px; top: 8px; z-index: 999; color: white; font-family: Arial, sans-serif;
+      background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 6px; font-size: 13px;
+    }
+    .host-note { font-size: 12px; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="instructions">
+    <strong>Orb Rescue — A-Frame Demo</strong><br>
+    Look at glowing orbs to collect them (1s gaze).<br>
+    Avoid drones — they lower score if they touch you.<br>
+    Tap the VR button (bottom-right) to enter VR/Cardboard mode.<br>
+    <div class="host-note">Tip: open this page in Chrome on Android and press the VR icon.</div>
+  </div>
+
+  <a-scene background="color: #88ccee" embedded>
+    <!-- Lighting -->
+    <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+    <a-entity light="type: directional; intensity: 0.8" position="0 4 2"></a-entity>
+
+    <!-- Ground -->
+    <a-plane rotation="-90 0 0" width="40" height="40" color="#225522"></a-plane>
+
+    <!-- Simple sky -->
+    <a-sky color="#88ccee"></a-sky>
+
+    <!-- Player (camera) with gaze cursor -->
+    <a-entity id="player" position="0 1.6 0">
+      <a-entity camera look-controls>
+        <!-- Gaze cursor with fuse (gaze selection) -->
+        <a-entity id="cursor"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.03"
+                  material="color: #fff; shader: flat; opacity: 0.85"
+                  cursor="fuse: true; fuseTimeout: 1000"
+                  raycaster="objects: .clickable">
+        </a-entity>
+
+        <!-- HUD: score + timer + multiplier attached to camera -->
+        <a-entity id="hud" position="-0.45 0.4 -1.2">
+          <a-text id="scoreText" value="Score: 0" align="left" color="#fff" width="1.8"></a-text>
+          <a-entity position="0 -0.18 0">
+            <a-text id="timeText" value="Time: 60" align="left" color="#fff" width="1.8"></a-text>
+          </a-entity>
+          <a-entity position="0 -0.36 0">
+            <a-text id="multText" value="Combo: x1" align="left" color="#fff" width="1.8"></a-text>
+          </a-entity>
+        </a-entity>
+
+      </a-entity>
+    </a-entity>
+
+    <!-- Initial orbs (collectibles) -->
+    <a-sphere class="collectible clickable" id="orb1" position="-1 1 -3" radius="0.2" color="#ffdd55" emissive="#ffdd55" emissiveIntensity="0.9" data-value="1"></a-sphere>
+    <a-sphere class="collectible clickable" id="orb2" position="1 1 -3" radius="0.2" color="#55ffcc" emissive="#55ffcc" emissiveIntensity="0.9" data-value="2"></a-sphere>
+
+    <!-- A simple drone template (invisible in scene, will be cloned via JS) -->
+    <a-box id="droneTemplate" visible="false" depth="0.6" height="0.3" width="0.8" color="#aa2233"
+           class="drone clickable" drone></a-box>
+
+    <!-- Simple particle for collect feedback -->
+    <a-entity id="effectTemplate" visible="false">
+      <a-sphere radius="0.12" color="#fff" opacity="0.9" animation="property: scale; to: 2 2 2; dur: 450; easing: easeOutQuad"></a-sphere>
+    </a-entity>
+
+    <!-- Scripts: gameplay logic + sound + scoring tweaks -->
+    <script>
+      // --- Simple WebAudio sound helper (no external files needed) ---
+      const Sound = (function(){
+        let ctx;
+        function ensure() { if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playTone(frequency, duration, type='sine', start=0){
+          ensure();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = type; o.frequency.value = frequency;
+          o.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0.0001, ctx.currentTime+start);
+          g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime+start+0.005);
+          o.start(ctx.currentTime+start);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+start+duration);
+          o.stop(ctx.currentTime+start+duration+0.02);
+        }
+        function playCollect(){
+          // quick rising arpeggio
+          playTone(600, 0.09, 'sine');
+          playTone(800, 0.06, 'sine', 0.06);
+        }
+        function playHit(){
+          // low thud
+          playTone(120, 0.18, 'sawtooth');
+        }
+        function playEnd(){
+          // small jingle
+          playTone(400, 0.12, 'sine');
+          playTone(550, 0.12, 'sine', 0.12);
+          playTone(700, 0.12, 'sine', 0.24);
+        }
+        return { playCollect, playHit, playEnd };
+      })();
+
+      AFRAME.registerComponent('drone', {
+        schema: {},
+        init: function () {
+          this.speed = 0.8 + Math.random() * 1.2; // variable speed
+          this.direction = new THREE.Vector3((Math.random()-0.5), 0, (Math.random()-0.5)).normalize();
+          this.player = document.querySelector('#player');
+          this.aggroDistance = 3.5;
+          this.chasing = false;
+        },
+        tick: function (time, delta) {
+          var pos = this.el.object3D.position;
+          var playerPos = this.player.object3D.position;
+          var dist = pos.distanceTo(playerPos);
+          if (dist < this.aggroDistance) {
+            this.chasing = true;
+            var dirToPlayer = new THREE.Vector3().subVectors(playerPos, pos).normalize();
+            pos.addScaledVector(dirToPlayer, this.speed * (delta/1000));
+          } else {
+            if (Math.random() < 0.01) { this.direction.set((Math.random()-0.5), 0, (Math.random()-0.5)).normalize(); }
+            pos.addScaledVector(this.direction, this.speed * (delta/1000));
+          }
+
+          pos.x = THREE.MathUtils.clamp(pos.x, -8, 8);
+          pos.z = THREE.MathUtils.clamp(pos.z, -12, 2);
+
+          if (dist < 0.8) {
+            var evt = new CustomEvent('droneHit', {detail: {id: this.el.id}});
+            window.dispatchEvent(evt);
+            var push = new THREE.Vector3().subVectors(pos, playerPos).normalize();
+            pos.addScaledVector(push, 1.2);
+          }
+        }
+      });
+
+      // Game manager with scoring tweaks (orb values, combos, dynamic spawn)
+      (function (){
+        var score = 0;
+        var timeLeft = 60; // seconds
+        var scoreText = null;
+        var timeText = null;
+        var multText = null;
+        var scene = null;
+        var orbSpawner = null;
+        var droneSpawner = null;
+
+        // combo system
+        var lastCollectTime = 0;
+        var combo = 1; // multiplier
+        var comboWindow = 2.0; // seconds to continue combo
+        var comboMax = 4;
+
+        // drone spawn base
+        var baseDroneInterval = 4500; // ms
+
+        window.addEventListener('load', function (){
+          scene = document.querySelector('a-scene');
+          scoreText = document.querySelector('#scoreText');
+          timeText = document.querySelector('#timeText');
+          multText = document.querySelector('#multText');
+
+          scene.addEventListener('click', function(e){
+            var el = e.target;
+            if (!el) return;
+            if (el.classList && el.classList.contains('collectible')) {
+              collectOrb(el);
+            }
+          });
+
+          orbSpawner = setInterval(spawnOrb, 2500);
+          startDroneSpawner();
+
+          setInterval(function(){
+            timeLeft--;
+            timeText.setAttribute('value', 'Time: ' + timeLeft);
+            if (timeLeft <= 0) endGame();
+          }, 1000);
+
+          window.addEventListener('droneHit', function(e){
+            handleDroneHit(e.detail.id);
+          });
+        });
+
+        function collectOrb(el){
+          var val = parseInt(el.getAttribute('data-value') || '1');
+          var now = performance.now()/1000;
+          if (now - lastCollectTime <= comboWindow) {
+            combo = Math.min(comboMax, combo + 1);
+          } else {
+            combo = 1;
+          }
+          lastCollectTime = now;
+
+          var gained = val * combo;
+          changeScore(gained);
+
+          // visual + sound
+          var effT = document.querySelector('#effectTemplate');
+          var eff = effT.cloneNode(true);
+          eff.setAttribute('visible', true);
+          eff.object3D.position.copy(el.object3D.position);
+          scene.appendChild(eff);
+          setTimeout(function(){ eff.remove(); }, 600);
+
+          Sound.playCollect();
+          updateMultiplierHUD();
+          el.parentNode.removeChild(el);
+        }
+
+        function handleDroneHit(id){
+          changeScore(-2); // heavier penalty
+          combo = 1; // reset combo on hit
+          updateMultiplierHUD();
+          Sound.playHit();
+        }
+
+        function changeScore(delta){
+          score += delta;
+          if (score < 0) score = 0;
+          scoreText.setAttribute('value', 'Score: ' + score);
+          adjustDifficulty();
+        }
+
+        function updateMultiplierHUD(){
+          multText.setAttribute('value', 'Combo: x' + combo);
+        }
+
+        function spawnOrb(){
+          var r = 2.2 + Math.random()*3.5;
+          var angle = Math.random()*Math.PI*2;
+          var x = Math.cos(angle)*r;
+          var z = Math.sin(angle)*r - 2;
+          var y = 0.8 + Math.random()*1.2;
+
+          var sph = document.createElement('a-sphere');
+          sph.setAttribute('class', 'collectible clickable');
+          sph.setAttribute('radius', 0.18);
+          var colors = ['#ffdd55','#55ffcc','#88ddff','#ff88cc'];
+          var values = [1,2,3,1];
+          var idx = Math.floor(Math.random()*colors.length);
+          sph.setAttribute('color', colors[idx]);
+          sph.setAttribute('emissive', colors[idx]);
+          sph.setAttribute('emissiveIntensity', '0.9');
+          sph.setAttribute('position', x + ' ' + y + ' ' + z);
+          sph.setAttribute('data-value', values[idx]);
+          sph.setAttribute('animation', 'property: position; dir: alternate; dur: 1200; to: ' + x + ' ' + (y+0.14) + ' ' + z + ' ; loop: true');
+
+          scene.appendChild(sph);
+          setTimeout(function(){ if (sph.parentNode) sph.parentNode.removeChild(sph); }, 18000);
+        }
+
+        function spawnDrone(){
+          var template = document.querySelector('#droneTemplate');
+          var drone = template.cloneNode(true);
+          drone.setAttribute('visible', true);
+          var edge = Math.floor(Math.random()*4);
+          var pos = {x:0,y:1.2,z:0};
+          if (edge===0){ pos.x=-9; pos.z = -2 + Math.random()*6; }
+          if (edge===1){ pos.x=9; pos.z = -2 + Math.random()*6; }
+          if (edge===2){ pos.x = -4 + Math.random()*8; pos.z = -12; }
+          if (edge===3){ pos.x = -4 + Math.random()*8; pos.z = 3; }
+          drone.setAttribute('position', pos.x + ' ' + pos.y + ' ' + pos.z);
+          drone.id = 'drone_' + Date.now() + '_' + Math.floor(Math.random()*999);
+
+          scene.appendChild(drone);
+          setTimeout(function(){ if (drone.parentNode) drone.parentNode.removeChild(drone); }, 25000);
+        }
+
+        // Dynamic drone spawner management
+        function startDroneSpawner(){
+          if (droneSpawner) clearInterval(droneSpawner);
+          var interval = Math.max(1200, baseDroneInterval - Math.floor(score/5)*500);
+          droneSpawner = setInterval(spawnDrone, interval);
+        }
+        function adjustDifficulty(){
+          // restart the drone spawner with possibly shorter interval
+          startDroneSpawner();
+        }
+
+        function endGame(){
+          clearInterval(orbSpawner);
+          if (droneSpawner) clearInterval(droneSpawner);
+          Sound.playEnd();
+          setTimeout(function(){ alert('Time up! Final score: ' + score + '
+Thanks for trying the demo.'); window.location.reload(); }, 600);
+        }
+
+      })();
+    </script>
+
+  </a-scene>
+</body>
+</html>
