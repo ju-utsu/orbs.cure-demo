@@ -1,93 +1,332 @@
-<html>
-  <head>
-    <title>VR Orb Collector</title>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <style>
-      #startButton {
-        position: absolute;
-        top: 40%;
-        left: 40%;
-        z-index: 999;
-        font-size: 20px;
-        padding: 10px 20px;
-      }
-      #score {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        color: white;
-        font-size: 20px;
-        font-family: sans-serif;
-        z-index: 999;
-      }
-    </style>
-  </head>
-  <body>
-    <button id="startButton">Start Demo</button>
-    <div id="score">Score: 0</div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Orb Rescue — Beautiful VR (A-Frame)</title>
 
-    <a-scene>
-      <a-sky color="#222"></a-sky>
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- Environment component for quick beautiful scenes -->
+  <script src="https://unpkg.com/aframe-environment-component@2.0.0/dist/aframe-environment-component.min.js"></script>
 
-      <!-- Orbs -->
-      <a-entity id="orb1" geometry="primitive: sphere; radius: 0.3"
-                material="color: orange"
-                position="0 1.6 -3"
-                class="clickable"></a-entity>
+  <style>
+    html,body { height:100%; margin:0; background:#000; font-family: Arial, sans-serif; }
+    .overlay {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      z-index:9999; background:linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.35));
+      color:#fff; text-align:center; padding:20px;
+    }
+    .overlay h1{ margin:0 0 8px 0; font-size:22px; }
+    .overlay p{ margin:0 0 14px 0; color:#eee; }
+    .btn {
+      appearance:none; border:0; background:#1abc9c; color:#042; padding:12px 18px; font-size:16px;
+      border-radius:10px; cursor:pointer;
+    }
+    .hud {
+      position:fixed; left:12px; top:12px; z-index:999; color:#fff; background:rgba(0,0,0,0.25);
+      padding:8px 12px; border-radius:8px; font-size:14px;
+    }
+    .hint { position:fixed; right:10px; bottom:10px; z-index:999; color:#fff; font-size:12px; }
+  </style>
+</head>
+<body>
 
-      <a-entity id="orb2" geometry="primitive: sphere; radius: 0.3"
-                material="color: blue"
-                position="2 1.6 -4"
-                class="clickable"></a-entity>
+  <div id="startOverlay" class="overlay">
+    <div>
+      <h1>Orb Rescue — Tap to Start</h1>
+      <p>Tap <strong>Start Demo</strong> to unlock audio and begin spawning orbs.<br>Then press the VR/Cardboard icon to enter VR mode.</p>
+      <button id="startBtn" class="btn">Start Demo</button>
+      <p style="font-size:12px; margin-top:8px; color:#ddd;">(Use Chrome on Android for the best Cardboard experience.)</p>
+    </div>
+  </div>
 
-      <a-entity id="orb3" geometry="primitive: sphere; radius: 0.3"
-                material="color: green"
-                position="-2 1.6 -4"
-                class="clickable"></a-entity>
+  <div class="hud" id="hud">Score: 0 &nbsp; • &nbsp; Time: 90s</div>
+  <div class="hint">Look at an orb for 1s to collect it</div>
 
-      <!-- Player camera with gaze cursor -->
-      <a-entity camera look-controls>
-        <a-entity cursor="fuse: true; fuseTimeout: 1000"
-                  position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                  material="color: white; shader: flat"></a-entity>
+  <a-scene embedded vr-mode-ui="enterVRButton: true" background="color: #88ccee">
+
+    <!-- Beautiful world using environment component -->
+    <a-entity environment="preset: forest; dressingAmount: 40; ground: hills; groundColor: #2a5; fog: 0.5; skyColor: #ffd1b3; lightPosition: 0 6 2;"></a-entity>
+
+    <!-- soft directional light to accent orbs -->
+    <a-entity light="type: directional; intensity: 0.8" position="-1 3 1"></a-entity>
+    <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+
+    <!-- Player camera with cursor ring (visible center reticle) -->
+    <a-entity id="player" position="0 1.6 0">
+      <a-entity camera look-controls wasd-controls-enabled="false">
+        <a-entity geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.03" material="color:#fff; shader:flat; opacity:0.95"
+                  position="0 0 -1" cursor="fuse: false;" raycaster="objects:.collectible"></a-entity>
       </a-entity>
-    </a-scene>
+    </a-entity>
 
+    <!-- Layer for orbs -->
+    <a-entity id="orbLayer"></a-entity>
+
+    <!-- Orb template (hidden) -->
+    <a-entity id="orbTemplate" visible="false">
+      <a-sphere radius="0.22" class="collectible" material="shader: standard; metalness: 0.2; roughness: 0.1" ></a-sphere>
+      <a-pointlight intensity="0.9" distance="5" decay="2"></a-pointlight>
+    </a-entity>
+
+    <!-- Collect flash particle template -->
+    <a-entity id="flashTemplate" visible="false">
+      <a-ring radius-inner="0.05" radius-outer="0.18" material="color:#fff; shader:flat; opacity:0.9" animation="property: scale; to:1.8 1.8 1.8; dur:260; easing: easeOutQuad"></a-ring>
+    </a-entity>
+
+    <!-- Score/time managed in DOM HUD; game logic below -->
     <script>
-      let audioCtx, collectSound;
-      let score = 0;
-      const scoreEl = document.getElementById('score');
+      // Game state
+      const Game = {
+        score: 0,
+        timeLeft: 90,
+        maxOrbs: 12,
+        orbIntervalMs: 1400,
+        audioUnlocked: false,
+        audioCtx: null,
+        musicNodes: [],
+        orbSpawner: null,
+        timerInterval: null
+      };
 
-      // Start button handler
-      document.getElementById('startButton').addEventListener('click', () => {
-        document.getElementById('startButton').style.display = 'none';
+      // --- WebAudio ambient pad + collect/hit sound ---
+      const AudioManager = (function(){
+        let ctx = null;
+        function ensure() {
+          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+          return ctx;
+        }
 
-        // Unlock audio
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function unlock() {
+          const c = ensure();
+          // resume or create a short silent buffer to unlock mobile audio
+          if (c.state === 'suspended' && c.resume) return c.resume();
+          return Promise.resolve();
+        }
 
-        // Prepare a short "ding" sound
-        collectSound = () => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = 880;
-          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-          osc.connect(gain).connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.15);
-        };
+        // Ambient pad: create a few detuned oscillators through a gentle LPF and slow gain
+        function startAmbient() {
+          const c = ensure();
+          // master output
+          const master = c.createGain(); master.gain.value = 0.0; master.connect(c.destination);
+          // lowpass filter to make it mellow
+          const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200; lp.Q.value = 0.7;
+          master.connect(lp); lp.connect(c.destination);
+          // create 3 detuned oscillators to form a soft chord
+          const freqs = [220, 330, 440]; // base-ish frequencies
+          const oscs = freqs.map((f, i) => {
+            const o = c.createOscillator();
+            o.type = 'sine';
+            o.frequency.value = f + (Math.random()*10 - 5);
+            const g = c.createGain(); g.gain.value = 0.0;
+            o.connect(g); g.connect(master);
+            o.start();
+            // gently ramp up their gain to avoid a pop
+            g.gain.linearRampToValueAtTime(0.025/(i+1), c.currentTime + 1.0 + i*0.2);
+            return {osc: o, gain: g};
+          });
+
+          // very slow wobble (LFO) to slightly modulate master gain and filter
+          const lfo = c.createOscillator(); lfo.frequency.value = 0.05; // very slow
+          const lfoGain = c.createGain(); lfoGain.gain.value = 0.012;
+          lfo.connect(lfoGain);
+          lfoGain.connect(master.gain);
+          lfoGain.connect(lp.frequency);
+          lfo.start();
+
+          // fade master in
+          master.gain.linearRampToValueAtTime(0.6, c.currentTime + 3.0);
+
+          // save references to stop later
+          Game.musicNodes = {master, lp, oscs, lfo, lfoGain};
+        }
+
+        // small collect chime
+        function playCollect() {
+          const c = ensure();
+          const o = c.createOscillator();
+          const g = c.createGain();
+          o.type = 'triangle';
+          o.frequency.value = 880;
+          o.connect(g); g.connect(c.destination);
+          g.gain.setValueAtTime(0.0001, c.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.13, c.currentTime + 0.01);
+          o.frequency.exponentialRampToValueAtTime(1200, c.currentTime + 0.12);
+          g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.25);
+          o.start(); o.stop(c.currentTime + 0.26);
+        }
+
+        // stop ambient
+        function stopAmbient() {
+          const nodes = Game.musicNodes;
+          if (!nodes) return;
+          try {
+            nodes.master.gain.linearRampToValueAtTime(0.0001, (ctx || nodes.master).currentTime + 0.6);
+            nodes.oscs.forEach(o=> o.osc.stop((ctx || o.osc).currentTime + 0.7));
+            nodes.lfo.stop((ctx || nodes.lfo).currentTime + 0.7);
+          } catch(e) { /* ignore */ }
+          Game.musicNodes = [];
+        }
+
+        return {ensure, unlock, startAmbient, playCollect, stopAmbient};
+      })();
+
+      // --- Gaze collectible component that uses mouseenter/leave + fuse ---
+      AFRAME.registerComponent('gaze-collectible', {
+        schema: {gazeTime: {type: 'int', default: 1000}},
+        init: function(){
+          this.gazeTimer = null; this.collected = false;
+          this.handleEnter = () => {
+            if (this.collected) return;
+            this.gazeTimer = setTimeout(()=> this.collect(), this.data.gazeTime);
+            // small hover effect
+            this.el.setAttribute('animation__hover', 'property: scale; to: 1.18 1.18 1.18; dur: 220; easing: easeOutQuad');
+          };
+          this.handleLeave = () => {
+            if (this.gazeTimer) { clearTimeout(this.gazeTimer); this.gazeTimer = null; }
+            this.el.removeAttribute('animation__hover');
+            this.el.setAttribute('scale', '1 1 1');
+          };
+          this.el.addEventListener('mouseenter', this.handleEnter);
+          this.el.addEventListener('mouseleave', this.handleLeave);
+          this.el.addEventListener('click', ()=> { if (!this.collected) this.collect(); });
+        },
+        collect: function() {
+          if (this.collected) return; this.collected = true;
+          // value (1-3)
+          const val = parseInt(this.el.getAttribute('data-value') || 1);
+          Game.score += val; updateHUD();
+          // collect sound
+          if (Game.audioUnlocked) AudioManager.playCollect();
+          // flash
+          spawnFlash(this.el.object3D.position);
+          // scale up and remove
+          this.el.setAttribute('animation__pop', 'property: scale; to: 2 2 2; dur: 220; easing: easeOutQuad');
+          setTimeout(()=> { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); }, 260);
+        },
+        remove: function(){
+          this.el.removeEventListener('mouseenter', this.handleEnter);
+          this.el.removeEventListener('mouseleave', this.handleLeave);
+        }
       });
 
-      // Orb click handler
-      document.querySelectorAll('.clickable').forEach(orb => {
-        orb.addEventListener('click', () => {
-          if (collectSound) collectSound();
-          score++;
-          scoreEl.innerText = `Score: ${score}`;
-          orb.parentNode.removeChild(orb);
+      // HUD update
+      function updateHUD() {
+        document.getElementById('hud').innerText = `Score: ${Game.score}  •  Time: ${Game.timeLeft}s`;
+      }
+
+      // spawn visual flash at position
+      function spawnFlash(pos) {
+        const template = document.getElementById('flashTemplate');
+        const flash = template.cloneNode(true);
+        flash.setAttribute('visible', true);
+        flash.object3D.position.copy(pos);
+        document.querySelector('a-scene').appendChild(flash);
+        setTimeout(()=> { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 420);
+      }
+
+      // spawn a single orb around the player within radius range, with nice color/value
+      function spawnOrbRandom() {
+        const currentOrbs = document.querySelectorAll('.collectible').length;
+        if (currentOrbs >= Game.maxOrbs) return;
+        const scene = document.querySelector('a-scene');
+        const template = document.getElementById('orbTemplate');
+        const wrapper = template.cloneNode(true);
+        // pick a color/value
+        const palette = [
+          {col:'#ffd86b', v:1},
+          {col:'#88f0ff', v:2},
+          {col:'#ff88e0', v:3},
+          {col:'#aaff8c', v:1}
+        ];
+        const pick = palette[Math.floor(Math.random()*palette.length)];
+        // position
+        const r = 2.0 + Math.random()*4.0;
+        const angle = Math.random()*Math.PI*2;
+        const x = Math.cos(angle)*r;
+        const z = Math.sin(angle)*r - 1.3; // slightly forward bias
+        const y = 0.8 + Math.random()*1.6;
+        // set sphere properties (the first child is the sphere)
+        const sphere = wrapper.querySelector('a-sphere');
+        sphere.setAttribute('position', '0 0 0'); // wrapper will be positioned
+        sphere.setAttribute('material', `color:${pick.col}; emissive:${pick.col}; metalness:0.25; roughness:0.08`);
+        sphere.setAttribute('class', 'collectible');
+        sphere.setAttribute('data-value', pick.v);
+        sphere.setAttribute('gaze-collectible', 'gazeTime:1000');
+        sphere.setAttribute('scale', '1 1 1');
+        // apply a float animation by moving wrapper
+        wrapper.setAttribute('position', `${x} ${y} ${z}`);
+        wrapper.setAttribute('animation', `property: position; dir: alternate; dur: ${1200+Math.floor(Math.random()*800)}; to: ${x} ${y+0.18} ${z}; loop: true`);
+        // add light / pointlight child settings
+        const pl = wrapper.querySelector('a-pointlight');
+        pl.setAttribute('color', pick.col);
+        pl.setAttribute('intensity', 0.7);
+        pl.setAttribute('distance', 5);
+        // add to scene
+        scene.appendChild(wrapper);
+        // auto-clean after 20s if uncollected
+        setTimeout(()=> { if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper); }, 20000);
+      }
+
+      // spawn periodic orbs and manage timer
+      function startSpawningAndTimer() {
+        // spawn a small initial cluster
+        for (let i=0;i<6;i++){ setTimeout(spawnOrbRandom, i*220); }
+        // periodic spawn
+        Game.orbSpawner = setInterval(spawnOrbRandom, Game.orbIntervalMs);
+        // game timer
+        Game.timerInterval = setInterval(()=> {
+          Game.timeLeft--; updateHUD();
+          if (Game.timeLeft <= 0) endGame();
+        }, 1000);
+      }
+
+      function endGame() {
+        clearInterval(Game.orbSpawner);
+        clearInterval(Game.timerInterval);
+        // gently stop ambient
+        AudioManager.stopAmbient();
+        setTimeout(()=> { alert(`Time up! Final score: ${Game.score}`); location.reload(); }, 700);
+      }
+
+      // Start button wiring: unlock audio + start ambient + start spawns
+      document.getElementById('startBtn').addEventListener('click', async function(){
+        try {
+          await AudioManager.ensure();
+        } catch(e) { /* ignore */ }
+        // unlock/resume audio context for mobile
+        AudioManager.unlock().then(()=> {
+          Game.audioUnlocked = true;
+          // start ambient background pad
+          AudioManager.startAmbient();
+          // hide overlay
+          document.getElementById('startOverlay').style.display = 'none';
+          // start spawning and timer
+          startSpawningAndTimer();
+          // quick collect sound to confirm
+          AudioManager.playCollect();
+        }).catch(()=> {
+          // fallback: still start spawns even if audio not unlocked
+          Game.audioUnlocked = false;
+          document.getElementById('startOverlay').style.display = 'none';
+          startSpawningAndTimer();
         });
       });
+
+      // for quick desktop testing: use space to simulate a collect of nearest orb
+      window.addEventListener('keydown', (e)=> {
+        if (e.key === ' ') {
+          const orb = document.querySelector('.collectible');
+          if (orb) orb.emit('click');
+        }
+      });
+
+      // Ensure HUD initially correct
+      updateHUD();
+
     </script>
-  </body>
-</html>
+
+  </a-scene>
+</body>
+  </html>
