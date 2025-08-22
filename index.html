@@ -1,256 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>VR Orb Collector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  </head>
+  <body style="margin:0;overflow:hidden;">
+    <button id="startButton" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      padding:20px;font-size:20px;z-index:999;">Start Game</button>
 
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Orb Rescue — Audio Unlock Fix</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <style>
-    body{margin:0;font-family:Arial;background:#000}
-    .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:9999;color:#fff}
-    .btn{background:#1abc9c;border:none;padding:12px 18px;border-radius:10px;font-size:16px;color:#042}
-    .hud{position:fixed;left:12px;top:12px;z-index:999;color:#fff;background:rgba(0,0,0,0.25);padding:8px 12px;border-radius:8px}
-    .small{font-size:13px;color:#ddd;margin-top:8px}
-  </style>
-</head>
-<body>
+    <a-scene embedded vr-mode-ui="enabled: true" background="color: #000">
+      <!-- Assets -->
+      <a-assets>
+        <audio id="bg-music" src="https://cdn.pixabay.com/download/audio/2021/09/15/audio_b62c11b6ff.mp3?filename=lofi-study-112191.mp3" preload="auto"></audio>
+        <audio id="collect-sound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_55f55e5166.mp3?filename=collectcoin-6075.mp3" preload="auto"></audio>
+      </a-assets>
 
-  <div id="startOverlay" class="overlay">
-    <div style="text-align:center">
-      <h2 style="margin:0 0 8px 0">Orb Rescue — Tap to Start</h2>
-      <button id="startBtn" class="btn">Start Demo</button>
-      <div class="small">(Tap once more on the screen if you still don't hear sound.)</div>
-      <div id="audioStatus" class="small" style="margin-top:10px;color:#ffdd57"></div>
-    </div>
-  </div>
-
-  <div id="hud" class="hud">Score: 0 • Audio: locked</div>
-
-  <a-scene embedded background="color:#a0d8ff">
-    <a-sky color="#f7d9d5"></a-sky>
-    <a-plane rotation="-90 0 0" width="80" height="80" color="#2b6b3f"></a-plane>
-
-    <a-entity id="player" position="0 1.6 0">
-      <a-entity camera look-controls>
-        <a-entity id="cursor" geometry="primitive:ring; radiusInner:0.015; radiusOuter:0.03"
-                  material="color:#fff; shader:flat; opacity:0.95" position="0 0 -1"
-                  cursor="fuse:false" raycaster="objects:.collectible"></a-entity>
+      <!-- Camera + Cursor -->
+      <a-entity id="player" position="0 1.6 0">
+        <a-camera>
+          <a-cursor color="yellow"></a-cursor>
+        </a-camera>
       </a-entity>
-    </a-entity>
 
-    <a-entity id="orbTemplate" visible="false">
-      <a-entity>
-        <a-sphere radius="0.28" material="shader:standard; metalness:0.25; roughness:0.08"></a-sphere>
-        <a-pointlight intensity="1.0" distance="6"></a-pointlight>
-      </a-entity>
-    </a-entity>
+      <!-- Lighting and Environment -->
+      <a-entity light="type:ambient;intensity:0.8;color:#fff"></a-entity>
+      <a-sky color="#101020"></a-sky>
+      <a-plane rotation="-90 0 0" width="50" height="50" color="#222"></a-plane>
+
+      <!-- Container for orbs -->
+      <a-entity id="orb-container"></a-entity>
+    </a-scene>
 
     <script>
-      // --- Game + Audio state ---
-      const Game = {
-        score: 0,
-        audioUnlocked: false,
-        audioCtx: null,
-        ambientNodes: null
-      };
+      const startBtn = document.getElementById("startButton");
+      const orbContainer = document.getElementById("orb-container");
+      const bgMusic = document.getElementById("bg-music");
+      const collectSound = document.getElementById("collect-sound");
+      let score = 0;
 
-      // --- Audio manager: ensure resume inside user gesture and play tiny buffer ---
-      const AudioMgr = (function(){
-        let ctx = null;
-        function ensure() {
-          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-          return ctx;
-        }
+      startBtn.addEventListener("click", () => {
+        startBtn.style.display = "none";
 
-        // Play a very short buffer (silence-ish beep) to unlock
-        function unlockAndTest() {
-          const c = ensure();
-          // resume if suspended (important)
-          return c.resume().then(()=> {
-            // create a short buffer and play it immediately
-            const sr = c.sampleRate;
-            const buf = c.createBuffer(1, Math.floor(sr * 0.05), sr); // 0.05s
-            const data = buf.getChannelData(0);
-            // fill buffer with a very small sine-ish burst to be audible but short
-            for (let i=0;i<data.length;i++){
-              data[i] = Math.sin(2*Math.PI*880*(i/sr)) * Math.exp(-10*(i/data.length));
-            }
-            const src = c.createBufferSource();
-            src.buffer = buf;
-            const g = c.createGain(); g.gain.value = 0.12;
-            src.connect(g); g.connect(c.destination);
-            return new Promise((res)=> {
-              src.onended = ()=> res(true);
-              try { src.start(0); } catch(e) { res(false); }
-            });
-          }).catch(()=> false);
-        }
+        // Start background music
+        bgMusic.play().catch(e => console.log("Audio play error:", e));
+        bgMusic.loop = true;
 
-        function startAmbientPad() {
-          const c = ensure();
-          // create small ambient pad with low volume
-          const master = c.createGain(); master.gain.value = 0.0001; master.connect(c.destination);
-          const lp = c.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value = 1200;
-          master.connect(lp); lp.connect(c.destination);
-          const freqs = [110, 220, 330];
-          const oscs = freqs.map((f,i)=>{
-            const o = c.createOscillator(); o.type='sine'; o.frequency.value = f + (Math.random()*4 - 2);
-            const g = c.createGain(); g.gain.value = 0.0001;
-            o.connect(g); g.connect(master);
-            o.start();
-            g.gain.linearRampToValueAtTime(0.03/(i+1), c.currentTime + 0.8 + i*0.2);
-            return {osc:o,gain:g};
-          });
-          const lfo = c.createOscillator(); lfo.frequency.value = 0.04;
-          const lfg = c.createGain(); lfg.gain.value = 0.02;
-          lfo.connect(lfg); lfg.connect(master.gain);
-          lfo.start();
-          master.gain.linearRampToValueAtTime(0.55, c.currentTime + 1.8);
-          Game.ambientNodes = {master,lp,oscs,lfo,lfg};
-        }
-
-        function playCollectChime() {
-          if (!ctx) return;
-          const c = ctx;
-          const o = c.createOscillator();
-          const g = c.createGain();
-          o.type = 'triangle'; o.frequency.value = 900;
-          o.connect(g); g.connect(c.destination);
-          g.gain.setValueAtTime(0.0001, c.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.14, c.currentTime + 0.01);
-          o.frequency.exponentialRampToValueAtTime(1200, c.currentTime + 0.12);
-          g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.24);
-          o.start(); o.stop(c.currentTime + 0.26);
-        }
-
-        function stopAmbient() {
-          if (!Game.ambientNodes) return;
-          try {
-            const c = ensure();
-            Game.ambientNodes.master.gain.linearRampToValueAtTime(0.0001, c.currentTime + 0.6);
-            Game.ambientNodes.oscs.forEach(o=> o.osc.stop(c.currentTime + 0.7));
-            Game.ambientNodes.lfo.stop(c.currentTime + 0.7);
-          } catch(e) {}
-          Game.ambientNodes = null;
-        }
-
-        return {ensure, unlockAndTest, startAmbientPad, playCollectChime, stopAmbient};
-      })();
-
-      // --- Gaze collectible component (mouseenter/leave) ---
-      AFRAME.registerComponent('gaze-collectible', {
-        schema: {gazeTime:{type:'int',default:1000}},
-        init: function(){
-          this.timer = null; this.done=false;
-          this.onEnter = ()=> { if (this.done) return; this.timer = setTimeout(()=> this.collect(), this.data.gazeTime); this.el.setAttribute('animation__hov','property:scale;to:1.12 1.12 1.12;dur:180'); };
-          this.onLeave = ()=> { if (this.timer){ clearTimeout(this.timer); this.timer=null;} this.el.removeAttribute('animation__hov'); this.el.setAttribute('scale','1 1 1'); };
-          this.onClick = ()=> { if (!this.done) this.collect(); };
-          this.el.addEventListener('mouseenter', this.onEnter);
-          this.el.addEventListener('mouseleave', this.onLeave);
-          this.el.addEventListener('click', this.onClick);
-        },
-        collect: function() {
-          if (this.done) return; this.done=true;
-          const val = parseInt(this.el.getAttribute('data-value')||'1');
-          Game.score += val; updateHUD();
-          if (Game.audioUnlocked) AudioMgr.playCollectChime();
-          // flash + remove
-          const pos = this.el.object3D.position.clone();
-          spawnFlash(pos);
-          this.el.setAttribute('animation__pop','property:scale;to:2 2 2;dur:220');
-          setTimeout(()=> { if (this.el.parentNode) this.el.parentNode.removeChild(this.el.parentNode); }, 260);
-        },
-        remove: function(){ this.el.removeEventListener('mouseenter', this.onEnter); this.el.removeEventListener('mouseleave', this.onLeave); this.el.removeEventListener('click', this.onClick); }
+        spawnOrbs(10);
       });
 
-      // HUD update
-      function updateHUD(){ document.getElementById('hud').innerText = `Score: ${Game.score} • Audio: ${Game.audioUnlocked?'on':'locked'}`; }
+      function spawnOrbs(count) {
+        for (let i = 0; i < count; i++) {
+          const orb = document.createElement("a-sphere");
+          orb.setAttribute("radius", "0.3");
+          orb.setAttribute("color", "#ff00ff");
+          orb.setAttribute("emissive", "#ff00ff");
+          orb.setAttribute("position", randomPosition());
+          orb.setAttribute("class", "collectible");
 
-      // spawn flash visual
-      function spawnFlash(pos) {
-        const tpl = document.getElementById('orbTemplate').cloneNode(true); // use cloned wrapper to show quick flash ring
-        tpl.setAttribute('visible', true);
-        const ring = document.createElement('a-ring');
-        ring.setAttribute('radius-inner', '0.05');
-        ring.setAttribute('radius-outer','0.18');
-        ring.setAttribute('material','color:#fff; shader:flat; opacity:0.95');
-        ring.setAttribute('animation','property:scale; to:1.8 1.8 1.8; dur:260; easing:easeOutQuad');
-        ring.object3D.position.copy(pos);
-        document.querySelector('a-scene').appendChild(ring);
-        setTimeout(()=> { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 420);
-      }
+          // Gaze-based collection
+          orb.addEventListener("mouseenter", () => {
+            collectSound.play();
+            orb.parentNode.removeChild(orb);
+            score++;
+            console.log("Score:", score);
+          });
 
-      // spawn orb around player
-      function spawnOrb() {
-        const current = document.querySelectorAll('.collectible').length;
-        if (current >= 20) return;
-        const scene = document.querySelector('a-scene');
-        const wrapper = document.getElementById('orbTemplate').cloneNode(true);
-        wrapper.setAttribute('visible', true);
-        const palette = [{c:'#ffd86b',v:1},{c:'#88f0ff',v:2},{c:'#ff88e0',v:3}];
-        const p = palette[Math.floor(Math.random()*palette.length)];
-        const r = 3 + Math.random()*3;
-        const angle = Math.random()*Math.PI*2;
-        const x = Math.cos(angle)*r;
-        const z = Math.sin(angle)*r - (Math.random()*1.2);
-        const y = 0.8 + Math.random()*1.8;
-        const sphere = wrapper.querySelector('a-sphere');
-        sphere.setAttribute('material', `color:${p.c}; emissive:${p.c}; metalness:0.25; roughness:0.06`);
-        sphere.setAttribute('class','collectible');
-        sphere.setAttribute('data-value', p.v);
-        sphere.setAttribute('gaze-collectible','gazeTime:1000');
-        const pl = wrapper.querySelector('a-pointlight');
-        pl.setAttribute('color', p.c); pl.setAttribute('intensity', 0.9); pl.setAttribute('distance', 6);
-        wrapper.setAttribute('position', `${x} ${y} ${z}`);
-        wrapper.setAttribute('animation', `property: position; dir: alternate; dur: ${1200+Math.floor(Math.random()*900)}; to: ${x} ${y+0.16} ${z}; loop: true`);
-        scene.appendChild(wrapper);
-        setTimeout(()=> { if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper); }, 22000);
-      }
-
-      // start game: unlock audio -> test buffer -> start ambient and spawn
-      async function startGame() {
-        const status = document.getElementById('audioStatus');
-        try {
-          const ok = await AudioMgr.unlockAndTest();
-          if (ok) {
-            Game.audioUnlocked = true;
-            status.innerText = 'Audio unlocked ✓';
-            setTimeout(()=> status.innerText = '', 2200);
-            // start ambient pad
-            AudioMgr.startAmbientPad();
-          } else {
-            Game.audioUnlocked = false;
-            status.innerText = 'Audio unlock failed — try tapping screen once';
-          }
-        } catch(e) {
-          Game.audioUnlocked = false;
-          status.innerText = 'Audio unlock error';
+          orbContainer.appendChild(orb);
         }
-        updateHUD();
-        // initial cluster so user immediately sees orbs
-        for (let i=0;i<8;i++){ setTimeout(spawnOrb, i*160); }
-        // continuous spawn
-        window._orbSpawner = setInterval(spawnOrb, 1400);
       }
 
-      // wire Start button to both touchstart and click (some phones need touchstart)
-      const startBtn = document.getElementById('startBtn');
-      function startHandler(e) {
-        e.preventDefault();
-        // hide overlay immediately to show scene; do audio unlock then
-        document.getElementById('startOverlay').style.display = 'none';
-        startGame();
+      function randomPosition() {
+        const radius = 4 + Math.random() * 3; // 4–7 meters away
+        const angle = Math.random() * Math.PI * 2;
+        const x = radius * Math.cos(angle);
+        const z = radius * Math.sin(angle);
+        const y = 1 + Math.random() * 2; // height between 1–3
+        return `${x} ${y} ${z}`;
       }
-      startBtn.addEventListener('click', startHandler);
-      startBtn.addEventListener('touchstart', startHandler, {passive:false});
-
-      // keyboard fallback
-      window.addEventListener('keydown', (e)=> { if (e.key === ' ') { const o = document.querySelector('.collectible'); if (o) o.emit('click'); } });
-
-      updateHUD();
     </script>
-
-  </a-scene>
-</body>
+  </body>
 </html>
