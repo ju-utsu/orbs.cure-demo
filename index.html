@@ -2,413 +2,348 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Orb Collector — WebVR / WebXR (Single-file)</title>
-  <meta name="description" content="Orb Collector: a polished, single-file WebXR VR game that runs on GitHub Pages. Collect orbs to score points before time runs out!" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Tomato VR — Orb Collector (Mobile WebVR)</title>
+  <script src="https://unpkg.com/aframe@1.5.0/dist/aframe.min.js"></script>
   <style>
-    /* Basic page layout and HUD */
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0f1a;color:#fff}
-    #ui{position:fixed;left:12px;top:12px;z-index:40;max-width:360px}
-    .panel{background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));backdrop-filter:blur(6px);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-    h1{margin:0 0 8px;font-size:18px}
-    button{background:#7c5cff;border:0;padding:8px 12px;border-radius:8px;color:white;font-weight:600;cursor:pointer}
-    button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.08)}
-    .muted{opacity:0.8;font-size:13px}
-    #hud{position:fixed;right:12px;top:12px;z-index:40;text-align:right}
-    #scoreBoard{font-size:16px;padding:10px;border-radius:10px}
-    #bigOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:60}
-    #overlayInner{width:min(680px,94%)}
-    .hidden{display:none}
-    /* small input styling */
-    input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit;width:100%;box-sizing:border-box}
-    .row{display:flex;gap:8px}
-    .center{display:flex;align-items:center;gap:8px}
-    .leader{margin-top:10px}
-    .leader li{margin:4px 0;font-size:14px}
-
-    /* Mobile hint */
-    #mobileHint{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:rgba(0,0,0,0.45);padding:8px 12px;border-radius:999px;font-size:13px;z-index:50}
-
-    /* small footer */
-    footer{position:fixed;left:12px;bottom:12px;opacity:0.9;font-size:12px}
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    #ui{position:fixed;left:12px;top:12px;z-index:20;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+    #score{font-size:20px;margin-bottom:6px}
+    #controls{display:flex;gap:8px}
+    .btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:8px 10px;border-radius:8px}
+    #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:rgba(0,0,0,.7);color:#fff;padding:10px 14px;border-radius:10px;display:none;z-index:30}
+    #mobile-controls{position:fixed;right:16px;bottom:18px;z-index:25;display:flex;gap:10px}
+    .mob-btn{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.12);color:#fff}
+    #title{font-weight:700;font-size:14px}
+    #instructions{font-size:12px;opacity:.9}
+    /* small hint for presentation */
+    #credit{position:fixed;left:12px;bottom:12px;color:#fff;opacity:.8;font-size:12px}
   </style>
-  <!-- A-Frame CDN -->
-  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-  <!-- optional extras: particle system (bundled) -->
-  <script src="https://unpkg.com/aframe-particle-system-component@4.0.0/dist/aframe-particle-system-component.min.js"></script>
 </head>
 <body>
-  <!-- UI (HTML overlay for menus / scores) -->
   <div id="ui">
-    <div class="panel" id="menuPanel">
-      <h1>Orb Collector — VR Jam Build</h1>
-      <div class="muted">Collect glowing orbs to score points. Works in desktop, mobile, and WebXR (VR) — perfect for GitHub Pages.</div>
-      <div style="height:8px"></div>
-      <label>Your player name</label>
-      <input id="playerName" type="text" placeholder="Tomato" maxlength="20" />
-      <div style="height:10px"></div>
-      <div class="row">
-        <button id="startBtn">Start Game</button>
-        <button class="secondary" id="howBtn">How to play</button>
-        <button class="secondary" id="settingsBtn">Settings</button>
-      </div>
-      <div style="height:8px"></div>
-      <div class="muted">Team-ready: Single-file project. Add to GitHub Pages as <code>index.html</code>.</div>
+    <div id="title">Tomato VR — Orb Collector</div>
+    <div id="score">Score: <span id="scoreVal">0</span></div>
+    <div id="controls">
+      <button id="startBtn" class="btn">Start</button>
+      <button id="resetBtn" class="btn">Reset</button>
+      <button id="leaderBtn" class="btn">Leaderboard</button>
     </div>
+    <div id="instructions">Mobile: tilt/look to aim • Right side drag to turn • Left side tap to move forward</div>
+  </div>
+  <div id="toast"></div>
+  <div id="credit">Team: 5 • Mobile-first WebVR • Host on GitHub Pages</div>
+  <div id="mobile-controls" hidden>
+    <button id="moveF" class="mob-btn">▲</button>
+    <button id="moveB" class="mob-btn">▼</button>
   </div>
 
-  <div id="hud">
-    <div id="scoreBoard" class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center"><div>Score: <span id="score">0</span></div><div>Time: <span id="time">90</span>s</div></div>
-      <div style="height:8px"></div>
-      <div class="muted">High score: <span id="highscore">0</span></div>
-    </div>
-  </div>
-
-  <div id="bigOverlay"><div id="overlayInner"></div></div>
-  <div id="mobileHint" class="hidden">Tap or use controller trigger to collect orbs.</div>
-  <footer class="muted">Built for static hosting — GitHub Pages friendly.</footer>
-
-  <!-- A-Frame Scene -->
-  <a-scene background="color: #081022" embedded vr-mode-ui="enterVRButton: true">
-    <!-- Camera rig -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls wasd-controls="enabled:true">
-        <!-- Desktop cursor fallback -->
-        <a-entity cursor="fuse:false;rayOrigin:mouse" raycaster="objects: .clickable" position="0 0 -1" geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02" material="color: #fff; shader: flat"></a-entity>
-      </a-entity>
+  <a-scene embedded background="color: #101216" vr-mode-ui="enabled: true">
+    <!-- camera / player -->
+    <a-entity id="player" position="0 1.6 0">
+      <a-entity id="camera" camera look-controls wasd-controls="enabled: false"></a-entity>
+      <a-entity id="hand-ray" raycaster="objects: .orb" line="color: #00ffcc"></a-entity>
     </a-entity>
 
-    <!-- Controllers for VR (laser + click) -->
-    <a-entity laser-controls="hand: left" raycaster="objects:.clickable" line="opacity:0.8"></a-entity>
-    <a-entity laser-controls="hand: right" raycaster="objects:.clickable" line="opacity:0.8"></a-entity>
+    <!-- ground and sky -->
+    <a-plane rotation="-90 0 0" width="200" height="200" color="#0a0a0f" material="shader: flat"></a-plane>
+    <a-sky color="#0b1020"></a-sky>
 
-    <!-- Floor and arena -->
-    <a-plane rotation="-90 0 0" width="60" height="60" color="#061025" static-body></a-plane>
+    <!-- lighting -->
+    <a-entity light="type: ambient; intensity:0.6"></a-entity>
+    <a-entity light="type: point; intensity:1.2; distance:40" position="0 8 0"></a-entity>
 
-    <!-- sky / atmosphere -->
-    <a-sky color="#071028"></a-sky>
+    <!-- spawner entity; orbs will be generated by script -->
+    <a-entity id="spawner"></a-entity>
 
-    <!-- ambient and dynamic lights -->
-    <a-entity light="type: ambient; color: #889" ></a-entity>
-    <a-entity light="type: directional; intensity:0.6" position="-0.5 1 0.5"></a-entity>
+    <!-- decorative stars -->
+    <a-entity id="stars"></a-entity>
 
-    <!-- visual center: shrine -->
-    <a-cylinder position="0 0.2 -3" radius="1.2" height="0.4" color="#101426" material="metalness:0.3; roughness:0.6"></a-cylinder>
-    <a-entity id="orbRoot"></a-entity>
-
-    <!-- particle field for ambience -->
-    <a-entity particle-system="preset: dust; particleCount: 300; size: 0.5; color: #6cf2ff, #7c5cff; maxAge: 8" position="0 2 -2"></a-entity>
-
+    <!-- scoreboard plane (visible in VR) -->
+    <a-entity id="hud" position="0 2 -1.5">
+      <a-plane width="1.2" height="0.5" color="#000" material="opacity:0.6"></a-plane>
+      <a-text id="vr-score-text" value="Score: 0" align="center" position="0 0 0.01" color="#fff"></a-text>
+    </a-entity>
   </a-scene>
 
   <script>
-    // Game configuration
-    const GAME_TIME = 90; // seconds
-    const INITIAL_SPAWN_INTERVAL = 1500; // ms
-    const MIN_SPAWN_INTERVAL = 400;
-    const ORB_LIFETIME = 12000; // ms if left alone
+  // === Game settings ===
+  const SETTINGS = {
+    ORB_COUNT: 12,
+    ORB_RESPAWN_INTERVAL: 1200, // ms
+    GAME_DURATION: 60, // seconds
+    ORB_RADIUS: 0.35,
+    SPAWN_RADIUS: 6,
+    COLLECTION_DISTANCE: 0.9
+n  };
 
-    // State
-    let score = 0;
-    let timeLeft = GAME_TIME;
-    let spawnInterval = INITIAL_SPAWN_INTERVAL;
-    let spawnTimer = null;
-    let countdownTimer = null;
-    let activeOrbs = new Set();
-    let running = false;
+  // UI refs
+  const scoreEl = document.getElementById('scoreVal');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const leaderBtn = document.getElementById('leaderBtn');
+  const toast = document.getElementById('toast');
+  const mobileControls = document.getElementById('mobile-controls');
+  const moveF = document.getElementById('moveF');
+  const moveB = document.getElementById('moveB');
 
-    // UI elements
-    const startBtn = document.getElementById('startBtn');
-    const howBtn = document.getElementById('howBtn');
-    const settingsBtn = document.getElementById('settingsBtn');
-    const overlay = document.getElementById('bigOverlay');
-    const overlayInner = document.getElementById('overlayInner');
-    const playerNameInput = document.getElementById('playerName');
-    const scoreEl = document.getElementById('score');
-    const timeEl = document.getElementById('time');
-    const highscoreEl = document.getElementById('highscore');
-    const mobileHint = document.getElementById('mobileHint');
+  const scene = document.querySelector('a-scene');
+  const player = document.getElementById('player');
+  const cameraEl = document.getElementById('camera');
+  const spawner = document.getElementById('spawner');
 
-    // Audio: using WebAudio oscillator + simple SFXs
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioCtx = new AudioContext();
-    function playClick() {
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = 'sine';
-      o.frequency.value = 880;
-      g.gain.value = 0.06;
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(); o.stop(audioCtx.currentTime + 0.06);
+  // game state
+  let score = 0;
+  let gameRunning = false;
+  let orbs = [];
+  let timer = null;
+  let timeLeft = SETTINGS.GAME_DURATION;
+
+  // audio: small synthesized sound for pickup and background loop
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playPickup(){
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 880;
+    g.gain.value = 0.0001;
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.15, now + 0.02);
+    o.frequency.exponentialRampToValueAtTime(1320, now + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+    o.start(now);
+    o.stop(now + 0.36);
+  }
+
+  // simple background loop (very light) — play once user interacts
+  let bgOsc;
+  function startBg(){
+    if (bgOsc) return;
+    bgOsc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    bgOsc.type = 'triangle';
+    bgOsc.frequency.value = 110;
+    g.gain.value = 0.01;
+    bgOsc.connect(g);
+    g.connect(audioCtx.destination);
+    bgOsc.start();
+  }
+
+  function showToast(txt, ms=1600){
+    toast.textContent = txt; toast.style.display='block';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>toast.style.display='none', ms);
+  }
+
+  // === Orb creation / behavior ===
+  function spawnOrb(id){
+    const angle = Math.random() * Math.PI * 2;
+    const r = 1.6 + Math.random() * SETTINGS.SPAWN_RADIUS;
+    const y = 1 + Math.random() * 2.2; // height
+    const x = Math.cos(angle) * r;
+    const z = Math.sin(angle) * r;
+
+    const orb = document.createElement('a-entity');
+    orb.setAttribute('class', 'orb');
+    orb.setAttribute('position', `${x} ${y} ${z}`);
+    orb.setAttribute('geometry', `primitive: sphere; radius: ${SETTINGS.ORB_RADIUS}`);
+    orb.setAttribute('material', 'shader: standard; emissive: #00ffd6; metalness: 0.2; roughness: 0.3; color:#55ffee');
+    orb.setAttribute('orb-behavior', `id:${id}`);
+    spawner.appendChild(orb);
+    orbs.push(orb);
+  }
+
+  AFRAME.registerComponent('orb-behavior', {
+    schema: {id: {type:'int', default:0}},
+    init: function(){
+      this.pulse = 0;
+    },
+    tick: function(t, dt){
+      // simple bob and pulse
+      this.pulse += dt/1000;
+      const y = 0.15 * Math.sin(this.pulse*2) + parseFloat(this.el.getAttribute('position').y);
+      // don't permanently change base y — we'll keep it stored
+      const pos = this.el.getAttribute('position');
+      this.el.setAttribute('position', {x: pos.x, y: y, z: pos.z});
+
+      // face the camera lightly via scale
+      const camPos = cameraEl.object3D.position;
+      const d = this.el.object3D.position.distanceTo(camPos);
+      const s = Math.max(0.6, Math.min(1.4, 1.2 - (d-1)/8));
+      this.el.setAttribute('scale', `${s} ${s} ${s}`);
+
+      // check collection
+      if (d < SETTINGS.COLLECTION_DISTANCE){
+        collectOrb(this.el, this.data.id);
+      }
     }
-    function playCollect() {
-      const o = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      o.type = 'triangle';
-      o.frequency.value = 660;
-      g.gain.value = 0.08;
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start();
-      o.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 0.2);
-      o.stop(audioCtx.currentTime + 0.22);
-    }
+  });
 
-    // Small helper: random in range
-    function rand(min, max) { return Math.random()*(max-min)+min }
+  function clearOrbs(){
+    orbs.forEach(o => o.parentNode && o.parentNode.removeChild(o));
+    orbs = [];
+  }
 
-    const scene = document.querySelector('a-scene');
-    const orbRoot = document.getElementById('orbRoot');
+  function respawnOrbs(){
+    clearOrbs();
+    for(let i=0;i<SETTINGS.ORB_COUNT;i++) spawnOrb(i+1);
+  }
 
-    // Create an orb entity
-    function createOrb() {
-      const orb = document.createElement('a-sphere');
-      orb.setAttribute('class','clickable orb');
-      // random position within ring area
-      const r = rand(1.2, 6.5);
-      const theta = rand(0, Math.PI*2);
-      const x = r * Math.cos(theta);
-      const z = r * Math.sin(theta) - 2; // bias towards center
-      const y = rand(0.6, 2.2);
-      orb.setAttribute('position', `${x} ${y} ${z}`);
-      orb.setAttribute('radius', '0.32');
-      orb.setAttribute('segments-width','16');
-      orb.setAttribute('segments-height','16');
-      orb.setAttribute('material', 'shader: standard; emissive: #7c5cff; emissiveIntensity: 0.9; metalness:0.2; roughness:0.1; opacity:0.95');
+  function collectOrb(el, id){
+    // visual pop
+    el.setAttribute('visible', false);
+    playPickup();
+    score += 1;
+    updateScore();
+    // add tiny explosion particle by creating small expanding sphere
+    const p = document.createElement('a-sphere');
+    p.setAttribute('position', el.getAttribute('position'));
+    p.setAttribute('radius', '0.1');
+    p.setAttribute('material','color:#fff;opacity:0.9');
+    spawner.appendChild(p);
+    // fade out
+    setTimeout(()=>{p.parentNode && p.parentNode.removeChild(p)}, 450);
 
-      // give each orb a point value and velocity (for float motion)
-      const points = Math.floor(rand(5, 21));
-      orb.dataset.points = points;
-      orb.dataset.spawnTime = Date.now();
+    // respawn after a tiny delay
+    setTimeout(()=>{
+      el.parentNode && el.parentNode.removeChild(el);
+      orbs = orbs.filter(o => o !== el);
+      setTimeout(()=> spawnOrb(id), 600 + Math.random()*1200);
+    }, 120);
+  }
 
-      // add a small bob animation
-      const freq = rand(0.8, 1.6);
-      orb.setAttribute('animation__bob', `property: position; dir: alternate; dur: ${1200/freq}; to: ${x} ${y+0.35} ${z}; loop: true; easing: easeInOutSine`);
+  function updateScore(){
+    scoreEl.textContent = score;
+    const vrText = document.getElementById('vr-score-text');
+    if (vrText) vrText.setAttribute('value', `Score: ${score}`);
+  }
 
-      // pulse scale
-      orb.setAttribute('animation__pulse', `property: scale; dir: alternate; dur: ${900+Math.random()*700}; to: 1.25 1.25 1.25; loop: true; easing: easeInOutQuad`);
-
-      // click handler
-      const onCollect = (evt) => {
-        // ignore if not running
-        if (!running) return;
-        // prevent double collect
-        if (!activeOrbs.has(orb)) return;
-        activeOrbs.delete(orb);
-        const p = parseInt(orb.dataset.points || 10, 10);
-        score += p;
-        scoreEl.textContent = score;
-        playCollect();
-
-        // small explosion particle
-        const part = document.createElement('a-entity');
-        part.setAttribute('position', orb.getAttribute('position'));
-        part.setAttribute('particle-system', `preset: dust; particleCount: 40; color: #7c5cff, #6cf2ff; maxAge: 0.8; size: 0.2`);
-        scene.appendChild(part);
-        setTimeout(()=>part.remove(), 900);
-
-        // animate orb scale to 0 then remove
-        orb.setAttribute('animation__pop', 'property: scale; to: 0.01 0.01 0.01; dur: 240; easing: easeOutQuad');
-        setTimeout(()=>orb.remove(), 260);
-      };
-
-      orb.addEventListener('click', onCollect);
-      orb.addEventListener('mousedown', onCollect);
-      orb.addEventListener('touchstart', (e)=>{ e.preventDefault(); onCollect(e); });
-
-      // auto-despawn
-      const despawnTimeout = setTimeout(()=>{
-        if (activeOrbs.has(orb)) {
-          activeOrbs.delete(orb);
-          orb.remove();
-        }
-      }, ORB_LIFETIME);
-
-      orb.dataset.despawnTimeout = despawnTimeout;
-
-      orbRoot.appendChild(orb);
-      activeOrbs.add(orb);
-    }
-
-    // spawn loop
-    function startSpawning(){
-      if (spawnTimer) clearInterval(spawnTimer);
-      spawnTimer = setInterval(()=>{
-        // spawn 1-2 orbs each tick
-        createOrb();
-        if (Math.random() < 0.28) createOrb();
-
-        // gradually increase difficulty
-        if (spawnInterval > MIN_SPAWN_INTERVAL) {
-          spawnInterval = Math.max(MIN_SPAWN_INTERVAL, spawnInterval - 8);
-          clearInterval(spawnTimer);
-          startSpawning();
-        }
-      }, spawnInterval);
-    }
-
-    // countdown
-    function startCountdown(){
-      timeLeft = GAME_TIME;
-      timeEl.textContent = timeLeft;
-      countdownTimer = setInterval(()=>{
+  // === Game flow ===
+  function startGame(){
+    if (!gameRunning){
+      // resume audio context on user gesture
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      startBg();
+      score = 0; updateScore();
+      respawnOrbs();
+      timeLeft = SETTINGS.GAME_DURATION;
+      gameRunning = true;
+      startBtn.textContent = 'Playing...';
+      showToast('Game started — collect orbs!');
+      // timer
+      timer = setInterval(()=>{
         timeLeft -= 1;
-        timeEl.textContent = timeLeft;
-        if (timeLeft <= 0) {
-          clearInterval(countdownTimer);
-          endGame();
-        }
+        if (timeLeft <= 0){ endGame(); }
       }, 1000);
     }
+  }
+  function endGame(){
+    gameRunning = false;
+    clearInterval(timer);
+    startBtn.textContent = 'Start';
+    showToast(`Time up! Score: ${score}`);
+    saveScore(score);
+  }
 
-    function startGame(){
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      // reset state
-      score = 0; scoreEl.textContent = score;
-      timeLeft = GAME_TIME; timeEl.textContent = timeLeft;
-      spawnInterval = INITIAL_SPAWN_INTERVAL;
-      running = true;
-      overlay.classList.add('hidden');
-      document.getElementById('menuPanel').classList.add('hidden');
-      mobileHint.classList.remove('hidden');
+  function resetGame(){
+    gameRunning = false;
+    clearInterval(timer);
+    clearOrbs();
+    score = 0; updateScore();
+    startBtn.textContent = 'Start';
+    showToast('Reset!');
+  }
 
-      // remove existing orbs
-      activeOrbs.forEach(o=>o.remove()); activeOrbs.clear();
+  startBtn.addEventListener('click', ()=>{
+    startGame();
+  });
 
-      startSpawning();
-      startCountdown();
+  resetBtn.addEventListener('click', ()=>{
+    resetGame();
+  });
+
+  leaderBtn.addEventListener('click', ()=>{
+    showLeaderboard();
+  });
+
+  // === Leaderboard (localStorage) ===
+  const LB_KEY = 'tomato_vr_lb_v1';
+  function saveScore(s){
+    const name = prompt('Enter name for leaderboard (short):','Player') || 'Player';
+    const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
+    lb.push({name: name.slice(0,16), score: s, date: new Date().toISOString()});
+    lb.sort((a,b)=>b.score-a.score);
+    localStorage.setItem(LB_KEY, JSON.stringify(lb.slice(0,10)));
+    showToast('Saved to leaderboard');
+  }
+
+  function showLeaderboard(){
+    const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
+    if (lb.length === 0) return alert('No scores yet — play and save!');
+    let msg = 'Leaderboard:\n';
+    lb.forEach((r,i)=> msg += `${i+1}. ${r.name} — ${r.score}\n`);
+    alert(msg);
+  }
+
+  // === Mobile controls (very simple forward/back) ===
+  function enableMobileHUD(){
+    mobileControls.hidden = false;
+    moveF.addEventListener('touchstart', ()=> mobileMove(true));
+    moveF.addEventListener('touchend', ()=> mobileStop());
+    moveB.addEventListener('touchstart', ()=> mobileMove(false));
+    moveB.addEventListener('touchend', ()=> mobileStop());
+  }
+
+  let movingInterval = null;
+  function mobileMove(forward=true){
+    if (movingInterval) return;
+    movingInterval = setInterval(()=>{
+      const dir = new THREE.Vector3();
+      cameraEl.object3D.getWorldDirection(dir);
+      dir.y = 0; dir.normalize();
+      const mul = forward? 0.08 : -0.05;
+      player.object3D.position.x += dir.x * mul;
+      player.object3D.position.z += dir.z * mul;
+    }, 40);
+  }
+  function mobileStop(){ clearInterval(movingInterval); movingInterval=null; }
+
+  // show mobile HUD if touch
+  window.addEventListener('touchstart', ()=>{ enableMobileHUD(); }, {once:true});
+
+  // === stars decoration (cheap) ===
+  function makeStars(){
+    const starCount = 120;
+    for(let i=0;i<starCount;i++){
+      const s = document.createElement('a-sphere');
+      const rx = (Math.random()-0.5)*90;
+      const ry = 8 + Math.random()*40;
+      const rz = (Math.random()-0.5)*90;
+      s.setAttribute('position', `${rx} ${ry} ${rz}`);
+      s.setAttribute('radius', `${0.02 + Math.random()*0.08}`);
+      s.setAttribute('material', 'color: #fff; shader: flat; opacity: 0.9');
+      document.getElementById('stars').appendChild(s);
     }
+  }
+  makeStars();
 
-    function endGame(){
-      running = false;
-      // stop spawn
-      if (spawnTimer) { clearInterval(spawnTimer); spawnTimer = null; }
-      // remove remaining orbs slowly
-      activeOrbs.forEach(o=>{ o.remove(); }); activeOrbs.clear();
-      mobileHint.classList.add('hidden');
-      showEndScreen();
-    }
+  // initial spawn so the preview looks alive
+  respawnOrbs();
 
-    // Highscore storage
-    function loadHighscores(){
-      try{
-        const raw = localStorage.getItem('vr_orb_highscores');
-        return raw ? JSON.parse(raw) : [];
-      }catch(e){return []}
-    }
-    function saveHighscores(list){ localStorage.setItem('vr_orb_highscores', JSON.stringify(list)); }
+  // small helper: resume audio on first gesture
+  document.body.addEventListener('click', ()=>{ if (audioCtx.state === 'suspended') audioCtx.resume(); startBg(); }, {once:true});
 
-    function showEndScreen(){
-      // update highs
-      const name = (playerNameInput.value || 'Player').slice(0,20);
-      let hs = loadHighscores();
-      hs.push({name,score,date: new Date().toISOString()});
-      hs.sort((a,b)=>b.score - a.score);
-      hs = hs.slice(0,10);
-      saveHighscores(hs);
-      highscoreEl.textContent = hs.length ? hs[0].score : score;
+  // small accessibility: keyboard controls for desktop testing
+  window.addEventListener('keydown', (e)=>{
+    if (e.key === 'r') resetGame();
+    if (e.key === 's') startGame();
+  });
 
-      overlayInner.innerHTML = `
-        <div class="panel">
-          <h1>Time's up!</h1>
-          <div class="muted">Nice run, <strong>${name}</strong> — your score: <strong>${score}</strong></div>
-          <div style="height:8px"></div>
-          <div class="row" style="margin-top:8px">
-            <button id="playAgain">Play again</button>
-            <button class="secondary" id="viewBoard">Leaderboard</button>
-            <button class="secondary" id="shareBtn">Copy share text</button>
-          </div>
-          <ol class="leader">${hs.map(h=>`<li><strong>${h.name}</strong> — ${h.score} pts</li>`).join('')}</ol>
-        </div>
-      `;
-      overlay.classList.remove('hidden');
-
-      document.getElementById('playAgain').addEventListener('click', ()=>{
-        overlay.classList.add('hidden'); startGame();
-      });
-      document.getElementById('viewBoard').addEventListener('click', ()=>{
-        overlayInner.innerHTML = `<div class='panel'><h1>Leaderboard</h1><ol class='leader'>${hs.map(h=>`<li><strong>${h.name}</strong> — ${h.score} pts (${new Date(h.date).toLocaleString()})</li>`).join('')}</ol><div style='height:8px'></div><div class='row'><button id='backBtn'>Back</button></div></div>`;
-        document.getElementById('backBtn').addEventListener('click', ()=>{ showEndScreen(); });
-      });
-      document.getElementById('shareBtn').addEventListener('click', ()=>{
-        const txt = `I scored ${score} in Orb Collector! Can you beat me?`;
-        navigator.clipboard?.writeText(txt).then(()=>alert('Share text copied to clipboard!'));
-      });
-    }
-
-    // menu handlers
-    startBtn.addEventListener('click', ()=>{
-      startGame();
-    });
-
-    howBtn.addEventListener('click', ()=>{
-      overlayInner.innerHTML = `<div class='panel'><h1>How to play</h1><p class='muted'>Use mouse click / tap / or VR controller trigger to collect glowing orbs. Each orb gives points; collect as many as you can before time runs out. Difficulty increases over time.</p><div style='height:8px'></div><div class='row'><button id='closeHow'>OK</button></div></div>`;
-      overlay.classList.remove('hidden');
-      document.getElementById('closeHow').addEventListener('click', ()=>overlay.classList.add('hidden'));
-    });
-
-    settingsBtn.addEventListener('click', ()=>{
-      overlayInner.innerHTML = `<div class='panel'><h1>Settings</h1><label>Game time (seconds)</label><input id='timeSet' type='text' value='${GAME_TIME}' /><div style='height:8px'></div><div class='row'><button id='saveSettings'>Save</button><button id='closeSet' class='secondary'>Cancel</button></div></div>`;
-      overlay.classList.remove('hidden');
-      document.getElementById('closeSet').addEventListener('click', ()=>overlay.classList.add('hidden'));
-      document.getElementById('saveSettings').addEventListener('click', ()=>{
-        const t = parseInt(document.getElementById('timeSet').value||GAME_TIME, 10);
-        if (!isNaN(t) && t>10 && t<600) {
-          // NOTE: GAME_TIME is const — for simplicity, just reload page to reflect change
-          alert('Settings saved. (Reload to apply new time in this build)');
-          overlay.classList.add('hidden');
-        } else alert('Enter a number between 10 and 600');
-      });
-    });
-
-    // initial UI state
-    overlay.classList.remove('hidden');
-    overlayInner.innerHTML = document.getElementById('menuPanel').outerHTML;
-
-    // Friendly prompt for autoplay restrictions: resume audio on user gesture
-    document.addEventListener('click', ()=>{ if (audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{}); }, {once:true});
-
-    // small accessibility: keyboard 'Space' to collect nearby orb (desktop)
-    window.addEventListener('keydown', (e)=>{
-      if (e.code === 'Space' && running) {
-        // raycast from camera center
-        const cam = document.querySelector('[camera]');
-        if (!cam) return;
-        const origin = cam.object3D.getWorldPosition(new THREE.Vector3());
-        const dir = new THREE.Vector3(0,0,-1).applyQuaternion(cam.object3D.getWorldQuaternion(new THREE.Quaternion()));
-        // find nearest orb within 1.6m and within 18 degrees
-        let nearest = null; let nearestDist = 999;
-        activeOrbs.forEach(o=>{
-          const pos = new THREE.Vector3(); o.object3D.getWorldPosition(pos);
-          const v = pos.clone().sub(origin);
-          const dist = v.length();
-          const angle = v.normalize().angleTo(dir);
-          if (dist < 2.2 && angle < 0.35) { if (dist < nearestDist) { nearest = o; nearestDist = dist; } }
-        });
-        if (nearest) {
-          nearest.dispatchEvent(new Event('click'));
-        }
-      }
-    });
-
-    // Show default highscore
-    highscoreEl.textContent = (loadHighscores()[0] || {score:0}).score || 0;
-
-    // small UX: hide menu panel since overlay shows it
-    document.getElementById('menuPanel').classList.add('hidden');
-
-    // Encourage players on mobile
-    if (/Mobi|Android/i.test(navigator.userAgent)) {
-      mobileHint.classList.remove('hidden');
-    }
-
-    // Performance: clean up orphan particles periodically
-    setInterval(()=>{
-      document.querySelectorAll('[particle-system]').forEach(p=>{
-        // remove old transient particle systems not inside scene.
-        if (!scene.contains(p)) p.remove();
-      });
-    }, 4000);
+  // save before unload
+  window.addEventListener('beforeunload', ()=>{ localStorage.setItem(LB_KEY, localStorage.getItem(LB_KEY) || JSON.stringify([])); });
 
   </script>
 </body>
