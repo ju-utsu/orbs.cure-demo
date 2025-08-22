@@ -42,79 +42,15 @@
   <a-sphere class="orb" position="-2 1.5 -6" radius="0.3" color="#FFD700"></a-sphere>
   </a-scene>
   <script>
-window.addEventListener('DOMContentLoaded', ()=>{
-  const scene = document.querySelector('a-scene');
-  const loading = document.getElementById('loading');
-  const ui = document.getElementById('ui');
+  let score = 0;
 
-  scene.addEventListener('loaded', ()=>{
-    loading.style.display = 'none';
-    ui.style.display = 'block';
-    initGame();
-  });
-
-  function initGame(){
-    const SETTINGS = { ORB_COUNT:10, ORB_RADIUS:0.35, SPAWN_RADIUS:6, COLLECTION_DISTANCE:0.9, GAME_DURATION:60 };
-    const scoreEl = document.getElementById('scoreVal');
-    const startBtn = document.getElementById('startBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const leaderBtn = document.getElementById('leaderBtn');
-    const toast = document.getElementById('toast');
-    const spawner = document.getElementById('spawner');
-    const player = document.getElementById('player');
-    const cameraEl = document.getElementById('camera');
-
-    let score=0, gameRunning=false, orbs=[], timer=null, timeLeft=SETTINGS.GAME_DURATION;
-
-    function showToast(txt){toast.textContent=txt;toast.style.display='block';clearTimeout(toast._t);toast._t=setTimeout(()=>toast.style.display='none',1500);}
-
-    function updateScore(){scoreEl.textContent=score;}
-
-    function spawnOrb(id){
-      const angle=Math.random()*Math.PI*2;
-      const r=1.6+Math.random()*SETTINGS.SPAWN_RADIUS;
-      const y=1+Math.random()*2.2;
-      const x=Math.cos(angle)*r;
-      const z=Math.sin(angle)*r;
-      const orb=document.createElement('a-sphere');
-      orb.setAttribute('class','orb');
-      orb.setAttribute('radius',SETTINGS.ORB_RADIUS);
-      orb.setAttribute('color','#55ffee');
-      orb.setAttribute('emissive','#00ffd6');
-      orb.object3D.position.set(x,y,z);
-      spawner.appendChild(orb);
-      orbs.push(orb);
-    }
-
-    function respawnOrbs(){clearOrbs();for(let i=0;i<SETTINGS.ORB_COUNT;i++)spawnOrb(i);}
-    function clearOrbs(){orbs.forEach(o=>o.remove());orbs=[];}
-
-    function startGame(){
-      if(gameRunning)return;
-      score=0;updateScore();respawnOrbs();gameRunning=true;timeLeft=SETTINGS.GAME_DURATION;
-      timer=setInterval(()=>{timeLeft--;if(timeLeft<=0)endGame();},1000);
-      showToast('Game Started!');
-    }
-
-    function endGame(){gameRunning=false;clearInterval(timer);showToast('Time up! Score:'+score);}
-    function resetGame(){gameRunning=false;clearInterval(timer);clearOrbs();score=0;updateScore();showToast('Reset!');}
-
-    startBtn.onclick=startGame;
-    resetBtn.onclick=resetGame;
-
-    scene.addEventListener('tick',()=>{
-      if(!gameRunning)return;
-      const camPos=cameraEl.object3D.position;
-      orbs.forEach(o=>{
-        if(o.object3D.position.distanceTo(camPos)<SETTINGS.COLLECTION_DISTANCE){
-          score++;updateScore();o.remove();orbs=orbs.filter(x=>x!==o);
-        }
-      });
+  document.querySelectorAll('.orb').forEach(orb => {
+    orb.addEventListener('mouseenter', () => {
+      orb.setAttribute('visible', 'false'); // Hide orb
+      score++;
+      console.log("Score:", score);
     });
-
-    respawnOrbs();
-  }
-});
+  });
   </script>
 </body>
 </html>
