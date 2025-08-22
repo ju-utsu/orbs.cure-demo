@@ -1,56 +1,34 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Tomato VR — Orb Collector</title>
-  <script src="https://unpkg.com/aframe@1.5.0/dist/aframe.min.js"></script>
-  <style>
-    html,body{height:100%;margin:0;background:#101216;color:#fff;font-family:system-ui;text-align:center}
-    #loading{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;color:#fff}
-    #ui{position:fixed;left:12px;top:12px;z-index:20;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.8)}
-    #score{font-size:20px;margin-bottom:6px}
-    .btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);padding:8px 10px;border-radius:8px;margin-right:6px}
-    #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:rgba(0,0,0,.7);color:#fff;padding:10px 14px;border-radius:10px;display:none;z-index:30}
-    #mobile-controls{position:fixed;right:16px;bottom:18px;z-index:25;display:flex;gap:10px}
-    .mob-btn{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.12);color:#fff;font-size:20px}
-  </style>
-</head>
-<body>
-<div id="loading">Loading VR Game...</div>
-<div id="ui" style="display:none">
-  <div id="score">Score: <span id="scoreVal">0</span></div>
-  <button id="startBtn" class="btn">Start</button>
-  <button id="resetBtn" class="btn">Reset</button>
-  <button id="leaderBtn" class="btn">Leaderboard</button>
-</div>
-<div id="toast"></div>
-<div id="mobile-controls" hidden>
-  <button id="moveF" class="mob-btn">▲</button>
-  <button id="moveB" class="mob-btn">▼</button>
-</div><a-scene embedded background="color:#101216" vr-mode-ui="enabled:true" renderer="antialias:true">
-  <a-scene>
-  <a-sky color="#87CEEB"></a-sky>
-  <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>VR Orb Collector</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  </head>
+  <body>
+    <a-scene>
+      <a-sky color="#87CEEB"></a-sky>
+      <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
 
-  <!-- Player -->
-  <a-entity id="player" camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+      <!-- Player -->
+      <a-entity id="player" camera look-controls wasd-controls position="0 1.6 0"></a-entity>
 
-  <!-- Orbs (static for now) -->
-  <a-sphere class="orb" position="0 1.5 -3" radius="0.3" color="#FFD700"></a-sphere>
-  <a-sphere class="orb" position="2 1.5 -5" radius="0.3" color="#FFD700"></a-sphere>
-  <a-sphere class="orb" position="-2 1.5 -6" radius="0.3" color="#FFD700"></a-sphere>
-  </a-scene>
-  <script>
-  let score = 0;
+      <!-- Orbs -->
+      <a-sphere class="orb" position="0 1.5 -3" radius="0.3" color="#FFD700"></a-sphere>
+      <a-sphere class="orb" position="2 1.5 -5" radius="0.3" color="#FFD700"></a-sphere>
+      <a-sphere class="orb" position="-2 1.5 -6" radius="0.3" color="#FFD700"></a-sphere>
+    </a-scene>
 
-  document.querySelectorAll('.orb').forEach(orb => {
-    orb.addEventListener('mouseenter', () => {
-      orb.setAttribute('visible', 'false'); // Hide orb
-      score++;
-      console.log("Score:", score);
-    });
-  });
-  </script>
-</body>
+    <script>
+      let score = 0;
+
+      document.querySelectorAll('.orb').forEach(orb => {
+        orb.addEventListener('mouseenter', () => {
+          orb.setAttribute('visible', 'false'); // Hide orb
+          score++;
+          console.log("Score:", score);
+        });
+      });
+    </script>
+  </body>
 </html>
