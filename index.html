@@ -29,15 +29,19 @@
   <button id="moveF" class="mob-btn">▲</button>
   <button id="moveB" class="mob-btn">▼</button>
 </div><a-scene embedded background="color:#101216" vr-mode-ui="enabled:true" renderer="antialias:true">
-  <a-entity id="player" position="0 1.6 0">
-    <a-entity id="camera" camera look-controls wasd-controls="enabled:false"></a-entity>
-  </a-entity>
-  <a-plane rotation="-90 0 0" width="200" height="200" color="#0a0a0f"></a-plane>
-  <a-sky color="#0b1020"></a-sky>
-  <a-entity light="type:ambient;intensity:0.6"></a-entity>
-  <a-entity light="type:point;intensity:1.2;distance:40" position="0 8 0"></a-entity>
-  <a-entity id="spawner"></a-entity>
-</a-scene><script>
+  <a-scene>
+  <a-sky color="#87CEEB"></a-sky>
+  <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
+
+  <!-- Player -->
+  <a-entity id="player" camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+
+  <!-- Orbs (static for now) -->
+  <a-sphere class="orb" position="0 1.5 -3" radius="0.3" color="#FFD700"></a-sphere>
+  <a-sphere class="orb" position="2 1.5 -5" radius="0.3" color="#FFD700"></a-sphere>
+  <a-sphere class="orb" position="-2 1.5 -6" radius="0.3" color="#FFD700"></a-sphere>
+  </a-scene>
+  <script>
 window.addEventListener('DOMContentLoaded', ()=>{
   const scene = document.querySelector('a-scene');
   const loading = document.getElementById('loading');
@@ -111,5 +115,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
     respawnOrbs();
   }
 });
-</script></body>
-  </html>
+  </script>
+</body>
+</html>
