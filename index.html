@@ -1,40 +1,122 @@
+<!DOCTYPE html>
 <html>
   <head>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <meta charset="utf-8">
+    <title>VR Orb Collector Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <style>
+      body, html { margin: 0; padding: 0; overflow: hidden; }
+      #hud {
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 10px 20px;
+        font-family: Arial, sans-serif;
+        font-size: 20px;
+        border-radius: 10px;
+        z-index: 10;
+      }
+      #controls {
+        position: fixed;
+        bottom: 20px;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        z-index: 10;
+      }
+      .btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 15px 25px;
+        font-size: 18px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
+    <div id="hud">Score: 0</div>
+    <div id="controls">
+      <button class="btn" id="forward">↑ Forward</button>
+      <button class="btn" id="backward">↓ Back</button>
+    </div>
+
     <a-scene>
+      <!-- Sky & Ground -->
       <a-sky color="#87CEEB"></a-sky>
-      <a-plane rotation="-90 0 0" width="30" height="30" color="green"></a-plane>
+      <a-plane color="#228B22" width="50" height="50" rotation="-90 0 0"></a-plane>
 
-      <a-sphere class="orb" position="0 1.5 -3" radius="0.3" color="yellow"></a-sphere>
-      <a-sphere class="orb" position="2 1.5 -4" radius="0.3" color="yellow"></a-sphere>
-      <a-sphere class="orb" position="-2 1.5 -5" radius="0.3" color="yellow"></a-sphere>
-
-      <a-text id="scoreText" value="Score: 0" position="-0.5 1.8 -1" color="black"></a-text>
-      <a-entity sound="src: url('https://cdn.aframe.io/basic-guide/audio/backgroundnoise.wav'); autoplay: true; loop: true;"></a-entity>
+      <!-- Player -->
+      <a-entity id="player" position="0 1.6 0">
+        <a-camera wasd-controls-enabled="false" look-controls></a-camera>
+      </a-entity>
     </a-scene>
 
     <script>
+      const scene = document.querySelector('a-scene');
+      const hud = document.getElementById('hud');
+      const player = document.getElementById('player');
+
       let score = 0;
-      const scoreText = document.querySelector('#scoreText');
 
-      document.querySelectorAll('.orb').forEach(orb => {
-        orb.addEventListener('mouseenter', () => {
-          orb.setAttribute('visible', 'false');
-          score++;
-          scoreText.setAttribute('value', `Score: ${score}`);
-          orb.setAttribute('sound', 'src: url(https://cdn.aframe.io/basic-guide/audio/click.ogg); autoplay: true');
-          setTimeout(() => {
-            orb.setAttribute('position', randomPosition());
-            orb.setAttribute('visible', 'true');
-          }, 1000);
-        });
-      });
-
-      function randomPosition() {
-        return `${(Math.random() * 10 - 5).toFixed(2)} 1.5 ${(Math.random() * -10 - 2).toFixed(2)}`;
+      // Function to spawn an orb at random position
+      function spawnOrb() {
+        const orb = document.createElement('a-sphere');
+        orb.setAttribute('color', 'yellow');
+        orb.setAttribute('radius', '0.5');
+        orb.setAttribute('position', `${(Math.random() * 20 - 10).toFixed(2)} 1 ${(Math.random() * -20).toFixed(2)}`);
+        orb.classList.add('orb');
+        scene.appendChild(orb);
       }
+
+      // Spawn initial orbs
+      for (let i = 0; i < 5; i++) {
+        spawnOrb();
+      }
+
+      // Check collision every 500ms
+      setInterval(() => {
+        const orbs = document.querySelectorAll('.orb');
+        const playerPos = player.object3D.position;
+        orbs.forEach(orb => {
+          const orbPos = orb.object3D.position;
+          const distance = playerPos.distanceTo(orbPos);
+          if (distance < 1.2) {
+            orb.parentNode.removeChild(orb);
+            score++;
+            hud.innerText = `Score: ${score}`;
+            spawnOrb();
+          }
+        });
+      }, 500);
+
+      // Movement controls
+      let moveForward = false;
+      let moveBackward = false;
+
+      document.getElementById('forward').addEventListener('touchstart', () => moveForward = true);
+      document.getElementById('forward').addEventListener('touchend', () => moveForward = false);
+      document.getElementById('backward').addEventListener('touchstart', () => moveBackward = true);
+      document.getElementById('backward').addEventListener('touchend', () => moveBackward = false);
+
+      function movePlayer() {
+        const direction = new THREE.Vector3();
+        player.object3D.getWorldDirection(direction);
+        if (moveForward) {
+          player.object3D.position.add(direction.multiplyScalar(0.1));
+        }
+        if (moveBackward) {
+          player.object3D.position.add(direction.multiplyScalar(-0.1));
+        }
+        requestAnimationFrame(movePlayer);
+      }
+      movePlayer();
     </script>
   </body>
 </html>
