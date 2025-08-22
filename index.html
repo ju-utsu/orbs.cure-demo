@@ -1,34 +1,40 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
-    <title>VR Orb Collector</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   </head>
   <body>
     <a-scene>
       <a-sky color="#87CEEB"></a-sky>
-      <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
+      <a-plane rotation="-90 0 0" width="30" height="30" color="green"></a-plane>
 
-      <!-- Player -->
-      <a-entity id="player" camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+      <a-sphere class="orb" position="0 1.5 -3" radius="0.3" color="yellow"></a-sphere>
+      <a-sphere class="orb" position="2 1.5 -4" radius="0.3" color="yellow"></a-sphere>
+      <a-sphere class="orb" position="-2 1.5 -5" radius="0.3" color="yellow"></a-sphere>
 
-      <!-- Orbs -->
-      <a-sphere class="orb" position="0 1.5 -3" radius="0.3" color="#FFD700"></a-sphere>
-      <a-sphere class="orb" position="2 1.5 -5" radius="0.3" color="#FFD700"></a-sphere>
-      <a-sphere class="orb" position="-2 1.5 -6" radius="0.3" color="#FFD700"></a-sphere>
+      <a-text id="scoreText" value="Score: 0" position="-0.5 1.8 -1" color="black"></a-text>
+      <a-entity sound="src: url('https://cdn.aframe.io/basic-guide/audio/backgroundnoise.wav'); autoplay: true; loop: true;"></a-entity>
     </a-scene>
 
     <script>
       let score = 0;
+      const scoreText = document.querySelector('#scoreText');
 
       document.querySelectorAll('.orb').forEach(orb => {
         orb.addEventListener('mouseenter', () => {
-          orb.setAttribute('visible', 'false'); // Hide orb
+          orb.setAttribute('visible', 'false');
           score++;
-          console.log("Score:", score);
+          scoreText.setAttribute('value', `Score: ${score}`);
+          orb.setAttribute('sound', 'src: url(https://cdn.aframe.io/basic-guide/audio/click.ogg); autoplay: true');
+          setTimeout(() => {
+            orb.setAttribute('position', randomPosition());
+            orb.setAttribute('visible', 'true');
+          }, 1000);
         });
       });
+
+      function randomPosition() {
+        return `${(Math.random() * 10 - 5).toFixed(2)} 1.5 ${(Math.random() * -10 - 2).toFixed(2)}`;
+      }
     </script>
   </body>
 </html>
