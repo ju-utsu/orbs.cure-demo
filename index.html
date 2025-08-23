@@ -7,9 +7,10 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     html,body{margin:0;height:100%;background:#06101a;color:#fff;font-family:system-ui}
-    #hud{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:5;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.6)}
-    #hud small{font-weight:500;opacity:.85}
-    #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 12px;border-radius:10px;display:none;z-index:6}
+    /* smaller, less-intrusive HUD */
+    #hud{position:fixed;left:12px;top:12px;z-index:5;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.6);font-size:14px}
+    #hud small{font-weight:500;opacity:.85;font-size:11px}
+    #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 12px;border-radius:10px;display:none;z-index:6;font-size:13px}
   </style>
 </head>
 <body>
@@ -37,23 +38,30 @@
     <!-- Player rig -->
     <a-entity id="rig" position="0 1.6 0">
       <a-entity id="camera" camera look-controls>
-        <!-- raycaster entity for gaze detection -->
+        <!-- raycaster entity for gaze detection attached to camera -->
         <a-entity id="raycaster" raycaster="objects: .interactable; interval: 50" position="0 0 0"></a-entity>
 
         <!-- visible 3D reticle: ring in front of camera -->
         <a-ring id="reticle" position="0 0 -0.95" radius-inner="0.018" radius-outer="0.03" color="#ffffff" material="shader: flat"></a-ring>
 
-        <!-- 3D HUD for VR mode -->
-        <a-entity position="0 -0.22 -1.2">
-          <a-plane width="0.82" height="0.24" color="#000" material="opacity:0.45"></a-plane>
-          <a-text id="vrScore" value="Score: 0" color="#fff" align="center" position="0 0 0.01"></a-text>
-        </a-entity>
+        <!-- NOTE: removed the in-scene VR HUD to avoid overlap with the fixed overlay HUD -->
+      </a-entity>
+    </a-entity>
 
-        <!-- Gear button (3D object) floating in view — still an entity in scene so it can be gazed at -->
-        <a-entity id="gearBtn" class="interactable ui" geometry="primitive: torus; radius:0.06; radiusTubular:0.02; segmentsRadial:16; segmentsTubular:8" material="color:#1f9cff" position="0.5 -0.25 -1"></a-entity>
+        <!-- visible 3D reticle: ring in front of camera -->
+        <a-ring id="reticle" position="0 0 -0.95" radius-inner="0.018" radius-outer="0.03" color="#ffffff" material="shader: flat"></a-ring>
+
+        <!-- 3D HUD for VR mode (kept small) -->
+        <a-entity position="0 -0.22 -1.2">
+          <a-plane width="0.6" height="0.18" color="#000" material="opacity:0.45"></a-plane>
+          <a-text id="vrScore" value="Score: 0" color="#fff" align="center" position="0 0 0.01" width="1"></a-text>
+        </a-entity>
 
       </a-entity>
     </a-entity>
+
+    <!-- Gear button placed in world (not child of camera) — will be positioned in front of camera on load -->
+    <a-entity id="gearBtn" class="interactable ui" geometry="primitive: torus; radius:0.08; radiusTubular:0.02; segmentsRadial:16; segmentsTubular:8" material="color:#1f9cff" position="0 1.4 -1.6" visible="false"></a-entity>
 
     <!-- Spawners -->
     <a-entity id="collect-spawner"></a-entity>
@@ -66,24 +74,24 @@
         <a-text value="Settings" color="#fff" position="-0.56 0.38 0.01" width="1.6"></a-text>
 
         <a-text value="Orb Gaze (sec)" color="#bfe5ff" position="-0.56 0.18 0.01" width="1.6"></a-text>
-        <a-entity id="orbMinus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.15 0.18 0.02"></a-entity>
+        <a-entity id="orbMinus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.15 0.18 0.02" data-kind="ui"></a-entity>
         <a-text value="-" color="#fff" position="0.145 0.16 0.03"></a-text>
         <a-plane width="0.28" height="0.14" color="#111" position="0.36 0.18 0.02"></a-plane>
         <a-text id="orbVal" value="0.15" color="#fff" position="0.3 0.16 0.03" width="1.4"></a-text>
-        <a-entity id="orbPlus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.57 0.18 0.02"></a-entity>
+        <a-entity id="orbPlus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.57 0.18 0.02" data-kind="ui"></a-entity>
         <a-text value="+" color="#fff" position="0.565 0.16 0.03"></a-text>
 
         <a-text value="Danger Gaze (sec)" color="#ffbfbf" position="-0.56 -0.02 0.01" width="1.6"></a-text>
-        <a-entity id="dangerMinus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.15 -0.02 0.02"></a-entity>
+        <a-entity id="dangerMinus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.15 -0.02 0.02" data-kind="ui"></a-entity>
         <a-text value="-" color="#fff" position="0.145 -0.04 0.03"></a-text>
         <a-plane width="0.28" height="0.14" color="#111" position="0.36 -0.02 0.02"></a-plane>
         <a-text id="dangerVal" value="0.50" color="#fff" position="0.3 -0.04 0.03" width="1.4"></a-text>
-        <a-entity id="dangerPlus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.57 -0.02 0.02"></a-entity>
+        <a-entity id="dangerPlus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.57 -0.02 0.02" data-kind="ui"></a-entity>
         <a-text value="+" color="#fff" position="0.565 -0.04 0.03"></a-text>
 
-        <a-entity id="closeBtn" class="interactable ui" geometry="primitive: box; width:0.38; height:0.16; depth:0.02" material="color:#1f9cff" position="-0.24 -0.36 0.02"></a-entity>
+        <a-entity id="closeBtn" class="interactable ui" geometry="primitive: box; width:0.38; height:0.16; depth:0.02" material="color:#1f9cff" position="-0.24 -0.36 0.02" data-kind="ui"></a-entity>
         <a-text value="Resume" color="#fff" position="-0.33 -0.375 0.03"></a-text>
-        <a-entity id="restartBtn" class="interactable ui" geometry="primitive: box; width:0.38; height:0.16; depth:0.02" material="color:#444" position="0.32 -0.36 0.02"></a-entity>
+        <a-entity id="restartBtn" class="interactable ui" geometry="primitive: box; width:0.38; height:0.16; depth:0.02" material="color:#444" position="0.32 -0.36 0.02" data-kind="ui"></a-entity>
         <a-text value="Restart" color="#fff" position="0.245 -0.375 0.03"></a-text>
       </a-entity>
     </a-entity>
@@ -93,7 +101,7 @@
       <a-entity position="0 1.4 -1.2">
         <a-plane width="1.2" height="0.6" color="#200" material="opacity:0.9"></a-plane>
         <a-text id="gameoverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01" width="1.8"></a-text>
-        <a-entity id="goRestart" class="interactable ui" geometry="primitive: box; width:0.46; height:0.18; depth:0.02" material="color:#b00" position="0 -0.16 0.01"></a-entity>
+        <a-entity id="goRestart" class="interactable ui" geometry="primitive: box; width:0.46; height:0.18; depth:0.02" material="color:#b00" position="0 -0.16 0.01" data-kind="ui"></a-entity>
         <a-text value="Restart" color="#fff" position="-0.12 -0.19 0.02"></a-text>
       </a-entity>
     </a-entity>
@@ -104,11 +112,10 @@
     // --- state ---
     const state = { running:true, paused:false, score:0, orbGazeSec:0.15, dangerGazeSec:0.50, timers:new Map(), roundTime:60, roundTimer:null };
     const scoreEl = document.getElementById('scoreVal');
-    const vrScore = document.getElementById('vrScore');
     const timeEl = document.getElementById('timeVal');
     const toast = document.getElementById('toast');
 
-    function setScore(v){ state.score=v; scoreEl.textContent=v; if(vrScore) vrScore.setAttribute('value', `Score: ${v}`); }
+    function setScore(v){ state.score=v; scoreEl.textContent=v; }
     function showToast(msg, ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.display='none', ms); }
 
     // --- particles helper ---
@@ -158,7 +165,6 @@
       orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
       orb.setAttribute('animation__float', `property: position; dir: alternate; dur: 2200; to: ${p.x} ${p.y+0.25} ${p.z}; loop: true; easing: easeInOutSine`);
       collectSpawner.appendChild(orb);
-      // mark kind for central gaze logic
       orb.dataset.gazeKind = 'collect';
     }
 
@@ -176,25 +182,37 @@
     for(let i=0;i<8;i++) spawnCollectable();
     for(let i=0;i<4;i++) spawnDanger();
 
+    // --- place gear in front-right of camera on load so it's in world, not stuck to HUD ---
+    const gear = document.getElementById('gearBtn');
+    document.querySelector('a-scene').addEventListener('loaded', ()=>{
+      const cam = document.getElementById('camera').object3D;
+      const pos = new THREE.Vector3(); cam.getWorldPosition(pos);
+      const dir = new THREE.Vector3(); cam.getWorldDirection(dir);
+      const right = new THREE.Vector3(); right.crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+      dir.multiplyScalar(1.5);
+      right.multiplyScalar(0.5);
+      pos.add(dir).add(right);
+      pos.y -= 0.25;
+      gear.object3D.position.copy(pos);
+      gear.dataset.gazeKind = 'ui';
+      gear.setAttribute('visible','true');
+      // subtle bobbing around its anchored position
+      gear.setAttribute('animation__bob', 'property: position; dir: alternate; dur: 2200; to: 0 1.45 -1.6; loop: true; easing: easeInOutSine');
+    });
+
     // --- central gaze handling using raycaster intersections ---
     const ray = document.getElementById('raycaster');
     const reticle = document.getElementById('reticle');
     let hoveredEl = null;
 
     ray.addEventListener('raycaster-intersection', (evt)=>{
-      // evt.detail.els is array of intersected els (A-Frame 1.2+)
       const els = evt.detail.els || (evt.detail.intersections && evt.detail.intersections.map(i=>i.object.el));
       const el = els && els.length? els[0] : null;
-      if(el && el !== hoveredEl){
-        // new hover start
-        handleHoverStart(el);
-        hoveredEl = el;
-      }
+      if(el && el !== hoveredEl){ if(hoveredEl) handleHoverEnd(hoveredEl); handleHoverStart(el); hoveredEl = el; }
     });
-    ray.addEventListener('raycaster-intersection-cleared', ()=>{
+    ray.addEventListener('raycaster-intersection-cleared', (evt)=>{
       if(hoveredEl) handleHoverEnd(hoveredEl);
       hoveredEl = null;
-      // reset reticle style
       reticle.setAttribute('color','#ffffff'); reticle.setAttribute('scale','1 1 1');
     });
 
@@ -207,6 +225,12 @@
       else if(kind==='danger') reticle.setAttribute('color','#ff4d4d');
       else if(kind==='ui') reticle.setAttribute('color','#1f9cff');
       reticle.setAttribute('scale','1.6 1.6 1');
+
+      // also scale the object slightly for UI / gear
+      if(kind==='ui'){
+        el.object3D.scale.set(1.25,1.25,1.25);
+        if(el.id==='gearBtn') el.setAttribute('material','color:#3fb0ff');
+      }
 
       // start dwell timer
       if(!state.running || state.paused) return;
@@ -224,16 +248,14 @@
           document.getElementById('dangerSound').play().catch(()=>{});
           gameOver('Gazed at danger');
         } else if(kind==='ui'){
-          // if it's the gear button
           if(el.id === 'gearBtn') openMenu();
-          // other UI handled via uiBind elsewhere
         }
       }, ms);
       state.timers.set(el, to);
     }
-    function handleHoverEnd(el){ const to = state.timers.get(el); if(to){ clearTimeout(to); state.timers.delete(el);} }
+    function handleHoverEnd(el){ const to = state.timers.get(el); if(to){ clearTimeout(to); state.timers.delete(el);} if(el && el.dataset){ const kind = el.dataset.gazeKind || (el.classList.contains('ui')? 'ui' : null); if(kind==='ui'){ el.object3D.scale.set(1,1,1); if(el.id==='gearBtn') el.setAttribute('material','color:#1f9cff'); } } }
 
-    // also allow click as fallback for desktop
+    // click fallback
     document.addEventListener('click', (ev)=>{
       if(hoveredEl && hoveredEl.dataset){
         const kind = hoveredEl.dataset.gazeKind || (hoveredEl.classList.contains('ui')? 'ui' : null);
@@ -243,8 +265,8 @@
       }
     });
 
-    // --- menu UI handlers ---
-    const menu = document.getElementById('menu'); const gearBtn = document.getElementById('gearBtn');
+    // --- menu UI handlers (bind via data-kind attributes) ---
+    const menu = document.getElementById('menu');
     const orbVal = document.getElementById('orbVal'); const dangerVal = document.getElementById('dangerVal');
     const orbMinus = document.getElementById('orbMinus'); const orbPlus = document.getElementById('orbPlus');
     const dangerMinus = document.getElementById('dangerMinus'); const dangerPlus = document.getElementById('dangerPlus');
@@ -253,15 +275,17 @@
     const UI_DWELL = 200;
     function uiBind(el, fn){ el.addEventListener('mouseenter', ()=>{ const to=setTimeout(()=>fn(), UI_DWELL); el._ui_to=to; }); el.addEventListener('mouseleave', ()=>{ if(el._ui_to){ clearTimeout(el._ui_to); el._ui_to=null; } }); }
 
-    function openMenu(){ if(state.paused) return; state.paused=true; menu.setAttribute('visible','true'); const cam = document.getElementById('camera').object3D; const pos = new THREE.Vector3(); cam.getWorldPosition(pos); const dir = new THREE.Vector3(); cam.getWorldDirection(dir); dir.multiplyScalar(1.4); pos.add(dir); pos.y -= 0.2; menu.object3D.position.copy(pos); const look = new THREE.Vector3(); cam.getWorldPosition(look); menu.object3D.lookAt(look); updateMenuNumbers(); showToast('Paused'); }
-    function closeMenu(){ menu.setAttribute('visible','false'); state.paused=false; showToast('Resumed'); }
+    function openMenu(){ if(state.paused) return; state.paused=true; menu.setAttribute('visible','true'); // position menu in front of camera
+      const cam = document.getElementById('camera').object3D; const pos = new THREE.Vector3(); cam.getWorldPosition(pos); const dir = new THREE.Vector3(); cam.getWorldDirection(dir); dir.multiplyScalar(1.4); pos.add(dir); pos.y -= 0.2; menu.object3D.position.copy(pos); const look = new THREE.Vector3(); cam.getWorldPosition(look); menu.object3D.lookAt(look); updateMenuNumbers(); showToast('Paused'); // hide gear while menu open
+      const gearEl = document.getElementById('gearBtn'); gearEl.setAttribute('visible','false'); }
+    function closeMenu(){ menu.setAttribute('visible','false'); state.paused=false; showToast('Resumed'); const gearEl = document.getElementById('gearBtn'); gearEl.setAttribute('visible','true'); }
     function updateMenuNumbers(){ orbVal.setAttribute('value', state.orbGazeSec.toFixed(2)); dangerVal.setAttribute('value', state.dangerGazeSec.toFixed(2)); }
 
-    uiBind(gearBtn, openMenu); uiBind(closeBtn, closeMenu); uiBind(restartBtn, ()=>restart());
     uiBind(orbMinus, ()=>{ state.orbGazeSec = Math.max(0.05, +(state.orbGazeSec - 0.05).toFixed(2)); updateMenuNumbers(); });
     uiBind(orbPlus,  ()=>{ state.orbGazeSec = Math.min(3.00,  +(state.orbGazeSec + 0.05).toFixed(2)); updateMenuNumbers(); });
     uiBind(dangerMinus, ()=>{ state.dangerGazeSec = Math.max(0.05, +(state.dangerGazeSec - 0.05).toFixed(2)); updateMenuNumbers(); });
     uiBind(dangerPlus,  ()=>{ state.dangerGazeSec = Math.min(5.00,  +(state.dangerGazeSec + 0.05).toFixed(2)); updateMenuNumbers(); });
+    uiBind(closeBtn, closeMenu); uiBind(restartBtn, ()=>restart());
 
     // --- Round timer & leaderboard ---
     function startRoundTimer(){ clearInterval(state.roundTimer); state.roundTime = 60; timeEl.textContent = state.roundTime; state.roundTimer = setInterval(()=>{ if(!state.running || state.paused) return; state.roundTime -=1; timeEl.textContent = state.roundTime; if(state.roundTime<=0){ clearInterval(state.roundTimer); endRound(); } },1000); }
@@ -285,4 +309,4 @@
 
   </script>
 </body>
-          </html>
+</html>
