@@ -1,98 +1,84 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>VR Orb Collector</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-      #scoreboard {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 28px;
-        color: white;
-        font-weight: bold;
-        text-shadow: 2px 2px 5px black;
-        z-index: 10;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="scoreboard">Score: 0</div>
+<head>
+  <meta charset="utf-8">
+  <title>VR Orb Collect Game</title>
+  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe-event-set-component@5.0.1/dist/aframe-event-set-component.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: sans-serif; }
+    #uiPanel {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 10px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+    }
+    input[type=range] { width: 200px; }
+  </style>
+</head>
+<body>
+  <div id="uiPanel">
+    <label for="gazeTime">Gaze Timer: <span id="timerValue">0.15</span> sec</label>
+    <input type="range" id="gazeTime" min="0.1" max="2" step="0.05" value="0.15">
+  </div>
 
-    <a-scene>
-      <!-- Sky & Ground -->
-      <a-sky color="#87CEEB"></a-sky>
-      <a-plane color="#228B22" rotation="-90 0 0" width="30" height="30"></a-plane>
+  <a-scene>
+    <a-sky color="#6CCFF6"></a-sky>
+    <a-plane position="0 0 -4" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
+    <a-camera id="camera" look-controls position="0 1.6 0">
+      <a-cursor fuse="true" fuse-timeout="150" color="yellow"></a-cursor>
+    </a-camera>
+  </a-scene>
 
-      <!-- Camera with Cursor for Gaze Detection -->
-      <a-entity camera look-controls>
-        <a-cursor 
-          color="white" 
-          fuse="true" 
-          fuse-timeout="150"
-          raycaster="objects: .clickable">
-        </a-cursor>
-      </a-entity>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const scene = document.querySelector('a-scene');
+      const timerSlider = document.getElementById('gazeTime');
+      const timerValue = document.getElementById('timerValue');
+      const cursor = document.querySelector('a-cursor');
 
-      <!-- Orb Container -->
-      <a-entity id="orb-container"></a-entity>
+      timerSlider.addEventListener('input', () => {
+        timerValue.textContent = timerSlider.value;
+        cursor.setAttribute('fuse-timeout', parseFloat(timerSlider.value) * 1000);
+      });
 
-      <!-- Sound -->
-      <a-asset>
-        <audio id="collectSound" src="sounds/collect.mp3"></audio>
-      </a-asset>
-    </a-scene>
+      scene.addEventListener('loaded', () => {
+        for (let i = 0; i < 5; i++) {
+          spawnOrb();
+        }
+      });
 
-    <script>
-      let score = 0;
-      const scoreboard = document.getElementById('scoreboard');
-      const orbContainer = document.getElementById('orb-container');
-
-      // Function to spawn a random orb
       function spawnOrb() {
         const orb = document.createElement('a-sphere');
         orb.setAttribute('radius', '0.3');
         orb.setAttribute('color', 'yellow');
-        orb.setAttribute('class', 'clickable');
-
-        // Random position within a range
-        const x = (Math.random() * 10) - 5;
-        const y = 1 + Math.random() * 2;
-        const z = (Math.random() * -8) - 2;
-        orb.setAttribute('position', `${x} ${y} ${z}`);
+        orb.setAttribute('position', randomPosition());
+        orb.setAttribute('class', 'orb');
+        orb.setAttribute('event-set__mouseenter', 'scale: 1.5 1.5 1.5');
+        orb.setAttribute('event-set__mouseleave', 'scale: 1 1 1');
 
         orb.addEventListener('click', () => {
-          collectOrb(orb);
+          orb.parentNode.removeChild(orb);
+          spawnOrb();
         });
 
-        orbContainer.appendChild(orb);
+        scene.appendChild(orb);
       }
 
-      // Collect orb
-      function collectOrb(orb) {
-        score += 10;
-        scoreboard.innerText = `Score: ${score}`;
-        orb.parentNode.removeChild(orb);
-
-        // Play sound
-        const sound = document.getElementById('collectSound');
-        sound.play();
-
-        // Spawn a new orb
-        spawnOrb();
+      function randomPosition() {
+        const x = (Math.random() - 0.5) * 10;
+        const z = (Math.random() - 0.5) * 10 - 5;
+        return `${x} 1.5 ${z}`;
       }
-
-      // Initial orbs
-      for (let i = 0; i < 5; i++) {
-        spawnOrb();
-      }
-    </script>
-  </body>
+    });
+  </script>
+</body>
 </html>
