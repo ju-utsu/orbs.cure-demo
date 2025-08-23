@@ -37,7 +37,11 @@
     <!-- Player rig -->
     <a-entity id="rig" position="0 1.6 0">
       <a-entity id="camera" camera look-controls>
-        <a-entity id="cursor" cursor="fuse: false" raycaster="objects: .interactable; interval: 60" position="0 0 -0.02"></a-entity>
+        <!-- raycaster entity for gaze detection -->
+        <a-entity id="raycaster" raycaster="objects: .interactable; interval: 50" position="0 0 0"></a-entity>
+
+        <!-- visible 3D reticle: ring in front of camera -->
+        <a-ring id="reticle" position="0 0 -0.95" radius-inner="0.018" radius-outer="0.03" color="#ffffff" material="shader: flat"></a-ring>
 
         <!-- 3D HUD for VR mode -->
         <a-entity position="0 -0.22 -1.2">
@@ -45,8 +49,9 @@
           <a-text id="vrScore" value="Score: 0" color="#fff" align="center" position="0 0 0.01"></a-text>
         </a-entity>
 
-        <!-- Gear button -->
-        <a-entity id="gearBtn" class="interactable ui" geometry="primitive: circle; radius: 0.06" material="color:#1f9cff" position="0.5 -0.25 -1"></a-entity>
+        <!-- Gear button (3D object) floating in view — still an entity in scene so it can be gazed at -->
+        <a-entity id="gearBtn" class="interactable ui" geometry="primitive: torus; radius:0.06; radiusTubular:0.02; segmentsRadial:16; segmentsTubular:8" material="color:#1f9cff" position="0.5 -0.25 -1"></a-entity>
+
       </a-entity>
     </a-entity>
 
@@ -116,7 +121,6 @@
         p.setAttribute('color','#fff');
         p.object3D.position.set(pos.x,pos.y,pos.z);
         scene.appendChild(p);
-        // animate
         const dx = pos.x+vx, dy = pos.y+vy, dz = pos.z+vz;
         p.setAttribute('animation__move', `property: position; to: ${dx} ${dy} ${dz}; dur: 500; easing: easeOutQuad`);
         p.setAttribute('animation__fade', `property: material.opacity; to: 0; dur: 500; delay:200`);
@@ -152,10 +156,10 @@
       orb.classList.add('interactable','collectable');
       orb.setAttribute('radius','0.33'); orb.setAttribute('color','#ffd84d'); orb.setAttribute('emissive','#ffeb99');
       orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
-      // floating animation
       orb.setAttribute('animation__float', `property: position; dir: alternate; dur: 2200; to: ${p.x} ${p.y+0.25} ${p.z}; loop: true; easing: easeInOutSine`);
       collectSpawner.appendChild(orb);
-      attachGazeBehavior(orb, 'collect');
+      // mark kind for central gaze logic
+      orb.dataset.gazeKind = 'collect';
     }
 
     function spawnDanger(){
@@ -166,39 +170,80 @@
       bad.setAttribute('color','#d43b3b'); bad.setAttribute('position', `${p.x} ${Math.max(0.6,p.y-0.6)} ${p.z}`);
       bad.setAttribute('animation__rotate', 'property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear');
       dangerSpawner.appendChild(bad);
-      attachGazeBehavior(bad, 'danger');
+      bad.dataset.gazeKind = 'danger';
     }
 
     for(let i=0;i<8;i++) spawnCollectable();
     for(let i=0;i<4;i++) spawnDanger();
 
-    // --- gaze behavior ---
-    function attachGazeBehavior(el, kind){
-      el.addEventListener('mouseenter', ()=>{
-        if(!state.running || state.paused) return;
-        const ms = kind==='collect' ? Math.round(state.orbGazeSec*1000) : Math.round(state.dangerGazeSec*1000);
-        const to = setTimeout(()=>{
-          if(!state.running || state.paused) return;
-          const pos = el.object3D.position;
-          if(kind==='collect'){
-            // collect
-            particleBurst(pos);
-            document.getElementById('collectSound').play().catch(()=>{});
-            try{ el.parentNode && el.parentNode.removeChild(el);}catch(e){}
-            setScore(state.score+1);
-            spawnCollectable();
-          } else {
-            // danger -> game over
-            document.getElementById('dangerSound').play().catch(()=>{});
-            gameOver('Gazed at danger');
-          }
-        }, ms);
-        state.timers.set(el, to);
-      });
-      el.addEventListener('mouseleave', ()=>{ const to = state.timers.get(el); if(to){ clearTimeout(to); state.timers.delete(el);} });
-    }
+    // --- central gaze handling using raycaster intersections ---
+    const ray = document.getElementById('raycaster');
+    const reticle = document.getElementById('reticle');
+    let hoveredEl = null;
 
-    // --- menu UI ---
+    ray.addEventListener('raycaster-intersection', (evt)=>{
+      // evt.detail.els is array of intersected els (A-Frame 1.2+)
+      const els = evt.detail.els || (evt.detail.intersections && evt.detail.intersections.map(i=>i.object.el));
+      const el = els && els.length? els[0] : null;
+      if(el && el !== hoveredEl){
+        // new hover start
+        handleHoverStart(el);
+        hoveredEl = el;
+      }
+    });
+    ray.addEventListener('raycaster-intersection-cleared', ()=>{
+      if(hoveredEl) handleHoverEnd(hoveredEl);
+      hoveredEl = null;
+      // reset reticle style
+      reticle.setAttribute('color','#ffffff'); reticle.setAttribute('scale','1 1 1');
+    });
+
+    function handleHoverStart(el){
+      if(!el || !el.dataset) return;
+      const kind = el.dataset.gazeKind || (el.classList.contains('ui')? 'ui' : null);
+      if(!kind) return;
+      // visual feedback on reticle
+      if(kind==='collect') reticle.setAttribute('color','#ffd84d');
+      else if(kind==='danger') reticle.setAttribute('color','#ff4d4d');
+      else if(kind==='ui') reticle.setAttribute('color','#1f9cff');
+      reticle.setAttribute('scale','1.6 1.6 1');
+
+      // start dwell timer
+      if(!state.running || state.paused) return;
+      const ms = kind==='collect' ? Math.round(state.orbGazeSec*1000) : (kind==='danger' ? Math.round(state.dangerGazeSec*1000) : 200);
+      const to = setTimeout(()=>{
+        if(!state.running || state.paused) return;
+        if(kind==='collect'){
+          const pos = el.object3D.position;
+          particleBurst(pos);
+          document.getElementById('collectSound').play().catch(()=>{});
+          try{ el.parentNode && el.parentNode.removeChild(el);}catch(e){}
+          setScore(state.score+1);
+          spawnCollectable();
+        } else if(kind==='danger'){
+          document.getElementById('dangerSound').play().catch(()=>{});
+          gameOver('Gazed at danger');
+        } else if(kind==='ui'){
+          // if it's the gear button
+          if(el.id === 'gearBtn') openMenu();
+          // other UI handled via uiBind elsewhere
+        }
+      }, ms);
+      state.timers.set(el, to);
+    }
+    function handleHoverEnd(el){ const to = state.timers.get(el); if(to){ clearTimeout(to); state.timers.delete(el);} }
+
+    // also allow click as fallback for desktop
+    document.addEventListener('click', (ev)=>{
+      if(hoveredEl && hoveredEl.dataset){
+        const kind = hoveredEl.dataset.gazeKind || (hoveredEl.classList.contains('ui')? 'ui' : null);
+        if(kind==='collect'){ const pos=hoveredEl.object3D.position; particleBurst(pos); document.getElementById('collectSound').play().catch(()=>{}); hoveredEl.parentNode && hoveredEl.parentNode.removeChild(hoveredEl); setScore(state.score+1); spawnCollectable(); }
+        else if(kind==='danger'){ document.getElementById('dangerSound').play().catch(()=>{}); gameOver('Clicked danger'); }
+        else if(kind==='ui'){ if(hoveredEl.id==='gearBtn') openMenu(); }
+      }
+    });
+
+    // --- menu UI handlers ---
     const menu = document.getElementById('menu'); const gearBtn = document.getElementById('gearBtn');
     const orbVal = document.getElementById('orbVal'); const dangerVal = document.getElementById('dangerVal');
     const orbMinus = document.getElementById('orbMinus'); const orbPlus = document.getElementById('orbPlus');
@@ -224,13 +269,11 @@
 
     function showGameOverPanel(msg){ const goPanel = document.getElementById('gameover'); const goText = document.getElementById('gameoverText'); goText.setAttribute('value', msg); goPanel.setAttribute('visible','true'); const cam = document.getElementById('camera').object3D; const pos = new THREE.Vector3(); cam.getWorldPosition(pos); const dir = new THREE.Vector3(); cam.getWorldDirection(dir); dir.multiplyScalar(1.2); pos.add(dir); goPanel.object3D.position.copy(pos); const look = new THREE.Vector3(); cam.getWorldPosition(look); goPanel.object3D.lookAt(look); }
 
-    // bind restart on game over button
     const goRestart = document.getElementById('goRestart'); uiBind(goRestart, ()=>restart());
 
     function gameOver(reason){ state.running=false; state.paused=true; showGameOverPanel(reason); showToast('Game Over'); }
 
-    function restart(){ // clear timers
-      state.timers.forEach((to)=>clearTimeout(to)); state.timers.clear(); Array.from(collectSpawner.children).forEach(ch=>ch.remove()); Array.from(dangerSpawner.children).forEach(ch=>ch.remove()); setScore(0); for(let i=0;i<8;i++) spawnCollectable(); for(let i=0;i<4;i++) spawnDanger(); document.getElementById('gameover').setAttribute('visible','false'); state.running=true; state.paused=false; startRoundTimer(); showToast('Restarted'); }
+    function restart(){ state.timers.forEach((to)=>clearTimeout(to)); state.timers.clear(); Array.from(collectSpawner.children).forEach(ch=>ch.remove()); Array.from(dangerSpawner.children).forEach(ch=>ch.remove()); setScore(0); for(let i=0;i<8;i++) spawnCollectable(); for(let i=0;i<4;i++) spawnDanger(); document.getElementById('gameover').setAttribute('visible','false'); state.running=true; state.paused=false; startRoundTimer(); showToast('Restarted'); }
 
     // --- initial start ---
     setScore(0); startRoundTimer();
@@ -238,12 +281,8 @@
     // --- leaderboard saving on round end ---
     function saveToLeaderboard(){ const name = prompt('Enter name for leaderboard','Player') || 'Player'; const lbKey='tomato_vr_lb_v2'; const lb = JSON.parse(localStorage.getItem(lbKey) || '[]'); lb.push({name:name.slice(0,16), score: state.score, date: new Date().toISOString()}); lb.sort((a,b)=> b.score - a.score); localStorage.setItem(lbKey, JSON.stringify(lb.slice(0,10))); alert('Saved! Top score: ' + lb[0].score); }
 
-    // when the round ends, ask to save
-    // attach a small watcher
-    const checkRoundEnd = setInterval(()=>{ if(!state.running && state.score>=0 && state.paused){ // round ended
-        clearInterval(checkRoundEnd); setTimeout(()=>{ if(confirm('Save your score to leaderboard?')) saveToLeaderboard(); },600);
-    } }, 1000);
+    const checkRoundEnd = setInterval(()=>{ if(!state.running && state.score>=0 && state.paused){ clearInterval(checkRoundEnd); setTimeout(()=>{ if(confirm('Save your score to leaderboard?')) saveToLeaderboard(); },600); } }, 1000);
 
   </script>
 </body>
-          </html>
+  </html>
