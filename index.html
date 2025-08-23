@@ -1,84 +1,249 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>VR Orb Collect Game</title>
-  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-event-set-component@5.0.1/dist/aframe-event-set-component.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Tomato VR — Orb Collector (Enhanced)</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
-    body { margin: 0; overflow: hidden; font-family: sans-serif; }
-    #uiPanel {
-      position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      padding: 10px;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 9999;
-    }
-    input[type=range] { width: 200px; }
+    html,body{margin:0;height:100%;background:#06101a;color:#fff;font-family:system-ui}
+    #hud{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:5;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+    #hud small{font-weight:500;opacity:.85}
+    #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 12px;border-radius:10px;display:none;z-index:6}
   </style>
 </head>
 <body>
-  <div id="uiPanel">
-    <label for="gazeTime">Gaze Timer: <span id="timerValue">0.15</span> sec</label>
-    <input type="range" id="gazeTime" min="0.1" max="2" step="0.05" value="0.15">
-  </div>
+  <div id="hud">Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s <small>(avoid red)</small></div>
+  <div id="toast"></div>
 
-  <a-scene>
-    <a-sky color="#6CCFF6"></a-sky>
-    <a-plane position="0 0 -4" rotation="-90 0 0" width="30" height="30" color="#228B22"></a-plane>
-    <a-camera id="camera" look-controls position="0 1.6 0">
-      <a-cursor fuse="true" fuse-timeout="150" color="yellow"></a-cursor>
-    </a-camera>
+  <a-scene renderer="antialias:true" background="color:#06101a">
+    <a-assets>
+      <!-- audio assets (public CDN fallback) -->
+      <audio id="collectSound" src="https://cdn.aframe.io/basic-guide/audio/click.ogg"></audio>
+      <audio id="dangerSound" src="https://cdn.aframe.io/basic-guide/audio/explosion.ogg"></audio>
+      <audio id="bgMusic" src="https://cdn.aframe.io/basic-guide/audio/backgroundnoise.wav"></audio>
+    </a-assets>
+
+    <!-- Environment -->
+    <a-entity light="type:ambient;intensity:0.6"></a-entity>
+    <a-entity light="type:directional;intensity:0.9;castShadow:true" position="1 4 0"></a-entity>
+    <a-sky color="#061733"></a-sky>
+
+    <!-- subtle starfield -->
+    <a-entity id="stars"></a-entity>
+
+    <a-plane rotation="-90 0 0" width="120" height="120" color="#07121a"></a-plane>
+
+    <!-- Player rig -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-entity id="camera" camera look-controls>
+        <a-entity id="cursor" cursor="fuse: false" raycaster="objects: .interactable; interval: 60" position="0 0 -0.02"></a-entity>
+
+        <!-- 3D HUD for VR mode -->
+        <a-entity position="0 -0.22 -1.2">
+          <a-plane width="0.82" height="0.24" color="#000" material="opacity:0.45"></a-plane>
+          <a-text id="vrScore" value="Score: 0" color="#fff" align="center" position="0 0 0.01"></a-text>
+        </a-entity>
+
+        <!-- Gear button -->
+        <a-entity id="gearBtn" class="interactable ui" geometry="primitive: circle; radius: 0.06" material="color:#1f9cff" position="0.5 -0.25 -1"></a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- Spawners -->
+    <a-entity id="collect-spawner"></a-entity>
+    <a-entity id="danger-spawner"></a-entity>
+
+    <!-- 3D Settings Menu (hidden) -->
+    <a-entity id="menu" visible="false">
+      <a-entity id="menuRoot" position="0 1.4 -1.4">
+        <a-plane width="1.26" height="0.96" color="#07121a" material="opacity:0.96"></a-plane>
+        <a-text value="Settings" color="#fff" position="-0.56 0.38 0.01" width="1.6"></a-text>
+
+        <a-text value="Orb Gaze (sec)" color="#bfe5ff" position="-0.56 0.18 0.01" width="1.6"></a-text>
+        <a-entity id="orbMinus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.15 0.18 0.02"></a-entity>
+        <a-text value="-" color="#fff" position="0.145 0.16 0.03"></a-text>
+        <a-plane width="0.28" height="0.14" color="#111" position="0.36 0.18 0.02"></a-plane>
+        <a-text id="orbVal" value="0.15" color="#fff" position="0.3 0.16 0.03" width="1.4"></a-text>
+        <a-entity id="orbPlus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.57 0.18 0.02"></a-entity>
+        <a-text value="+" color="#fff" position="0.565 0.16 0.03"></a-text>
+
+        <a-text value="Danger Gaze (sec)" color="#ffbfbf" position="-0.56 -0.02 0.01" width="1.6"></a-text>
+        <a-entity id="dangerMinus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.15 -0.02 0.02"></a-entity>
+        <a-text value="-" color="#fff" position="0.145 -0.04 0.03"></a-text>
+        <a-plane width="0.28" height="0.14" color="#111" position="0.36 -0.02 0.02"></a-plane>
+        <a-text id="dangerVal" value="0.50" color="#fff" position="0.3 -0.04 0.03" width="1.4"></a-text>
+        <a-entity id="dangerPlus" class="interactable ui" geometry="primitive: box; width:0.14; height:0.14; depth:0.02" material="color:#222" position="0.57 -0.02 0.02"></a-entity>
+        <a-text value="+" color="#fff" position="0.565 -0.04 0.03"></a-text>
+
+        <a-entity id="closeBtn" class="interactable ui" geometry="primitive: box; width:0.38; height:0.16; depth:0.02" material="color:#1f9cff" position="-0.24 -0.36 0.02"></a-entity>
+        <a-text value="Resume" color="#fff" position="-0.33 -0.375 0.03"></a-text>
+        <a-entity id="restartBtn" class="interactable ui" geometry="primitive: box; width:0.38; height:0.16; depth:0.02" material="color:#444" position="0.32 -0.36 0.02"></a-entity>
+        <a-text value="Restart" color="#fff" position="0.245 -0.375 0.03"></a-text>
+      </a-entity>
+    </a-entity>
+
+    <!-- Game Over panel -->
+    <a-entity id="gameover" visible="false">
+      <a-entity position="0 1.4 -1.2">
+        <a-plane width="1.2" height="0.6" color="#200" material="opacity:0.9"></a-plane>
+        <a-text id="gameoverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01" width="1.8"></a-text>
+        <a-entity id="goRestart" class="interactable ui" geometry="primitive: box; width:0.46; height:0.18; depth:0.02" material="color:#b00" position="0 -0.16 0.01"></a-entity>
+        <a-text value="Restart" color="#fff" position="-0.12 -0.19 0.02"></a-text>
+      </a-entity>
+    </a-entity>
+
   </a-scene>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    // --- state ---
+    const state = { running:true, paused:false, score:0, orbGazeSec:0.15, dangerGazeSec:0.50, timers:new Map(), roundTime:60, roundTimer:null };
+    const scoreEl = document.getElementById('scoreVal');
+    const vrScore = document.getElementById('vrScore');
+    const timeEl = document.getElementById('timeVal');
+    const toast = document.getElementById('toast');
+
+    function setScore(v){ state.score=v; scoreEl.textContent=v; if(vrScore) vrScore.setAttribute('value', `Score: ${v}`); }
+    function showToast(msg, ms=1400){ toast.textContent=msg; toast.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.display='none', ms); }
+
+    // --- particles helper ---
+    function particleBurst(pos){
       const scene = document.querySelector('a-scene');
-      const timerSlider = document.getElementById('gazeTime');
-      const timerValue = document.getElementById('timerValue');
-      const cursor = document.querySelector('a-cursor');
-
-      timerSlider.addEventListener('input', () => {
-        timerValue.textContent = timerSlider.value;
-        cursor.setAttribute('fuse-timeout', parseFloat(timerSlider.value) * 1000);
-      });
-
-      scene.addEventListener('loaded', () => {
-        for (let i = 0; i < 5; i++) {
-          spawnOrb();
-        }
-      });
-
-      function spawnOrb() {
-        const orb = document.createElement('a-sphere');
-        orb.setAttribute('radius', '0.3');
-        orb.setAttribute('color', 'yellow');
-        orb.setAttribute('position', randomPosition());
-        orb.setAttribute('class', 'orb');
-        orb.setAttribute('event-set__mouseenter', 'scale: 1.5 1.5 1.5');
-        orb.setAttribute('event-set__mouseleave', 'scale: 1 1 1');
-
-        orb.addEventListener('click', () => {
-          orb.parentNode.removeChild(orb);
-          spawnOrb();
-        });
-
-        scene.appendChild(orb);
+      for(let i=0;i<12;i++){
+        const p = document.createElement('a-sphere');
+        const vx=(Math.random()-0.5)*0.6, vy=Math.random()*0.8+0.2, vz=(Math.random()-0.5)*0.6;
+        p.setAttribute('radius','0.04');
+        p.setAttribute('color','#fff');
+        p.object3D.position.set(pos.x,pos.y,pos.z);
+        scene.appendChild(p);
+        // animate
+        const dx = pos.x+vx, dy = pos.y+vy, dz = pos.z+vz;
+        p.setAttribute('animation__move', `property: position; to: ${dx} ${dy} ${dz}; dur: 500; easing: easeOutQuad`);
+        p.setAttribute('animation__fade', `property: material.opacity; to: 0; dur: 500; delay:200`);
+        setTimeout(()=>{ p.parentNode && p.parentNode.removeChild(p); }, 750);
       }
+    }
 
-      function randomPosition() {
-        const x = (Math.random() - 0.5) * 10;
-        const z = (Math.random() - 0.5) * 10 - 5;
-        return `${x} 1.5 ${z}`;
+    // --- starfield ---
+    function makeStars(){
+      const stars = document.getElementById('stars');
+      for(let i=0;i<120;i++){
+        const s = document.createElement('a-sphere');
+        const rx = (Math.random()-0.5)*120;
+        const ry = 6 + Math.random()*40;
+        const rz = (Math.random()-0.5)*120;
+        s.setAttribute('position', `${rx} ${ry} ${rz}`);
+        s.setAttribute('radius', `${0.02 + Math.random()*0.06}`);
+        s.setAttribute('material', 'color: #fff; shader: flat; opacity: 0.9');
+        stars.appendChild(s);
       }
-    });
+    }
+    makeStars();
+
+    // --- spawners ---
+    const collectSpawner = document.getElementById('collect-spawner');
+    const dangerSpawner = document.getElementById('danger-spawner');
+
+    function randPos(){ const r = 4 + Math.random()*8, a = Math.random()*Math.PI*2, y = 0.8 + Math.random()*1.6; return {x: Math.cos(a)*r, y, z: Math.sin(a)*r}; }
+
+    function spawnCollectable(){
+      const p = randPos();
+      const orb = document.createElement('a-sphere');
+      orb.classList.add('interactable','collectable');
+      orb.setAttribute('radius','0.33'); orb.setAttribute('color','#ffd84d'); orb.setAttribute('emissive','#ffeb99');
+      orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
+      // floating animation
+      orb.setAttribute('animation__float', `property: position; dir: alternate; dur: 2200; to: ${p.x} ${p.y+0.25} ${p.z}; loop: true; easing: easeInOutSine`);
+      collectSpawner.appendChild(orb);
+      attachGazeBehavior(orb, 'collect');
+    }
+
+    function spawnDanger(){
+      const p = randPos();
+      const bad = document.createElement('a-box');
+      bad.classList.add('interactable','danger');
+      bad.setAttribute('width','0.5'); bad.setAttribute('height','0.5'); bad.setAttribute('depth','0.5');
+      bad.setAttribute('color','#d43b3b'); bad.setAttribute('position', `${p.x} ${Math.max(0.6,p.y-0.6)} ${p.z}`);
+      bad.setAttribute('animation__rotate', 'property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear');
+      dangerSpawner.appendChild(bad);
+      attachGazeBehavior(bad, 'danger');
+    }
+
+    for(let i=0;i<8;i++) spawnCollectable();
+    for(let i=0;i<4;i++) spawnDanger();
+
+    // --- gaze behavior ---
+    function attachGazeBehavior(el, kind){
+      el.addEventListener('mouseenter', ()=>{
+        if(!state.running || state.paused) return;
+        const ms = kind==='collect' ? Math.round(state.orbGazeSec*1000) : Math.round(state.dangerGazeSec*1000);
+        const to = setTimeout(()=>{
+          if(!state.running || state.paused) return;
+          const pos = el.object3D.position;
+          if(kind==='collect'){
+            // collect
+            particleBurst(pos);
+            document.getElementById('collectSound').play().catch(()=>{});
+            try{ el.parentNode && el.parentNode.removeChild(el);}catch(e){}
+            setScore(state.score+1);
+            spawnCollectable();
+          } else {
+            // danger -> game over
+            document.getElementById('dangerSound').play().catch(()=>{});
+            gameOver('Gazed at danger');
+          }
+        }, ms);
+        state.timers.set(el, to);
+      });
+      el.addEventListener('mouseleave', ()=>{ const to = state.timers.get(el); if(to){ clearTimeout(to); state.timers.delete(el);} });
+    }
+
+    // --- menu UI ---
+    const menu = document.getElementById('menu'); const gearBtn = document.getElementById('gearBtn');
+    const orbVal = document.getElementById('orbVal'); const dangerVal = document.getElementById('dangerVal');
+    const orbMinus = document.getElementById('orbMinus'); const orbPlus = document.getElementById('orbPlus');
+    const dangerMinus = document.getElementById('dangerMinus'); const dangerPlus = document.getElementById('dangerPlus');
+    const closeBtn = document.getElementById('closeBtn'); const restartBtn = document.getElementById('restartBtn');
+
+    const UI_DWELL = 200;
+    function uiBind(el, fn){ el.addEventListener('mouseenter', ()=>{ const to=setTimeout(()=>fn(), UI_DWELL); el._ui_to=to; }); el.addEventListener('mouseleave', ()=>{ if(el._ui_to){ clearTimeout(el._ui_to); el._ui_to=null; } }); }
+
+    function openMenu(){ if(state.paused) return; state.paused=true; menu.setAttribute('visible','true'); const cam = document.getElementById('camera').object3D; const pos = new THREE.Vector3(); cam.getWorldPosition(pos); const dir = new THREE.Vector3(); cam.getWorldDirection(dir); dir.multiplyScalar(1.4); pos.add(dir); pos.y -= 0.2; menu.object3D.position.copy(pos); const look = new THREE.Vector3(); cam.getWorldPosition(look); menu.object3D.lookAt(look); updateMenuNumbers(); showToast('Paused'); }
+    function closeMenu(){ menu.setAttribute('visible','false'); state.paused=false; showToast('Resumed'); }
+    function updateMenuNumbers(){ orbVal.setAttribute('value', state.orbGazeSec.toFixed(2)); dangerVal.setAttribute('value', state.dangerGazeSec.toFixed(2)); }
+
+    uiBind(gearBtn, openMenu); uiBind(closeBtn, closeMenu); uiBind(restartBtn, ()=>restart());
+    uiBind(orbMinus, ()=>{ state.orbGazeSec = Math.max(0.05, +(state.orbGazeSec - 0.05).toFixed(2)); updateMenuNumbers(); });
+    uiBind(orbPlus,  ()=>{ state.orbGazeSec = Math.min(3.00,  +(state.orbGazeSec + 0.05).toFixed(2)); updateMenuNumbers(); });
+    uiBind(dangerMinus, ()=>{ state.dangerGazeSec = Math.max(0.05, +(state.dangerGazeSec - 0.05).toFixed(2)); updateMenuNumbers(); });
+    uiBind(dangerPlus,  ()=>{ state.dangerGazeSec = Math.min(5.00,  +(state.dangerGazeSec + 0.05).toFixed(2)); updateMenuNumbers(); });
+
+    // --- Round timer & leaderboard ---
+    function startRoundTimer(){ clearInterval(state.roundTimer); state.roundTime = 60; timeEl.textContent = state.roundTime; state.roundTimer = setInterval(()=>{ if(!state.running || state.paused) return; state.roundTime -=1; timeEl.textContent = state.roundTime; if(state.roundTime<=0){ clearInterval(state.roundTimer); endRound(); } },1000); }
+    function endRound(){ state.running=false; state.paused=true; showToast('Round over!'); setTimeout(()=>{ showGameOverPanel(`Time's up! Score: ${state.score}`); },400); }
+
+    function showGameOverPanel(msg){ const goPanel = document.getElementById('gameover'); const goText = document.getElementById('gameoverText'); goText.setAttribute('value', msg); goPanel.setAttribute('visible','true'); const cam = document.getElementById('camera').object3D; const pos = new THREE.Vector3(); cam.getWorldPosition(pos); const dir = new THREE.Vector3(); cam.getWorldDirection(dir); dir.multiplyScalar(1.2); pos.add(dir); goPanel.object3D.position.copy(pos); const look = new THREE.Vector3(); cam.getWorldPosition(look); goPanel.object3D.lookAt(look); }
+
+    // bind restart on game over button
+    const goRestart = document.getElementById('goRestart'); uiBind(goRestart, ()=>restart());
+
+    function gameOver(reason){ state.running=false; state.paused=true; showGameOverPanel(reason); showToast('Game Over'); }
+
+    function restart(){ // clear timers
+      state.timers.forEach((to)=>clearTimeout(to)); state.timers.clear(); Array.from(collectSpawner.children).forEach(ch=>ch.remove()); Array.from(dangerSpawner.children).forEach(ch=>ch.remove()); setScore(0); for(let i=0;i<8;i++) spawnCollectable(); for(let i=0;i<4;i++) spawnDanger(); document.getElementById('gameover').setAttribute('visible','false'); state.running=true; state.paused=false; startRoundTimer(); showToast('Restarted'); }
+
+    // --- initial start ---
+    setScore(0); startRoundTimer();
+
+    // --- leaderboard saving on round end ---
+    function saveToLeaderboard(){ const name = prompt('Enter name for leaderboard','Player') || 'Player'; const lbKey='tomato_vr_lb_v2'; const lb = JSON.parse(localStorage.getItem(lbKey) || '[]'); lb.push({name:name.slice(0,16), score: state.score, date: new Date().toISOString()}); lb.sort((a,b)=> b.score - a.score); localStorage.setItem(lbKey, JSON.stringify(lb.slice(0,10))); alert('Saved! Top score: ' + lb[0].score); }
+
+    // when the round ends, ask to save
+    // attach a small watcher
+    const checkRoundEnd = setInterval(()=>{ if(!state.running && state.score>=0 && state.paused){ // round ended
+        clearInterval(checkRoundEnd); setTimeout(()=>{ if(confirm('Save your score to leaderboard?')) saveToLeaderboard(); },600);
+    } }, 1000);
+
   </script>
 </body>
-</html>
+          </html>
