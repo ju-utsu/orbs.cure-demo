@@ -1,162 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>VR Orb Collector</title>
-<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-<style>
-  body, html { margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; }
-  #hud {
-    position: fixed; top: 20px; left: 20px; color: white;
-    font-size: 24px; font-weight: bold; text-shadow: 1px 1px 4px #000;
-  }
-  #pauseBtn {
-    position: fixed; bottom: 20px; right: 20px;
-    background: rgba(255,255,255,0.8); color: black;
-    border: none; border-radius: 50%; width: 60px; height: 60px;
-    font-size: 24px; font-weight: bold; cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  }
-  #menuOverlay {
-    display: none; position: fixed; top: 0; left: 0;
-    width: 100%; height: 100%; background: rgba(0,0,0,0.8);
-    color: white; text-align: center; padding-top: 150px;
-    font-size: 30px; z-index: 1000;
-  }
-  .menu-btn {
-    margin-top: 30px; padding: 15px 30px; font-size: 24px;
-    background: #fff; color: #000; border-radius: 10px; cursor: pointer;
-  }
-</style>
-</head>
-<body>
-<div id="hud">Score: 0</div>
-<button id="pauseBtn">☰</button>
-<div id="menuOverlay">
-  <div>Game Paused</div>
-  <button class="menu-btn" onclick="resumeGame()">Resume</button>
-  <button class="menu-btn" onclick="restartGame()">Restart</button>
-</div>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Orb Collector VR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
 
-<a-scene>
-  <!-- Sky and Grid -->
-  <a-sky color="#0f0f0f"></a-sky>
-  <a-entity geometry="primitive: plane; width: 100; height: 100"
-            rotation="-90 0 0" material="color: #111; shader: flat; repeat: 50 50"
-            position="0 0 0"></a-entity>
+      #hud {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        color: white;
+        font-size: 20px;
+        z-index: 10;
+      }
 
-  <!-- Camera + Cursor -->
-  <a-entity camera look-controls wasd-controls position="0 1.6 0">
-    <a-entity cursor="fuse: true; fuseTimeout: 1500"
-              position="0 0 -1"
-              geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-              material="color: white; shader: flat"></a-entity>
-  </a-entity>
-</a-scene>
+      #menuButton {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #333;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 20;
+      }
 
-<!-- Sounds -->
-<audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2023/04/12/audio_a9e53529e3.mp3?filename=futuristic-background-145311.mp3" loop></audio>
-<audio id="collectSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_309c030a7e.mp3?filename=collect-coin-2-18698.mp3"></audio>
-<audio id="gameOverSound" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_8b7a2df0e5.mp3?filename=game-over-arcade-6435.mp3"></audio>
+      #menu {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 30;
+      }
 
-<script>
-let score = 0, multiplier = 1;
-let spawnInterval, powerUpActive = false;
-let gamePaused = false;
-const hud = document.getElementById('hud');
-const bgMusic = document.getElementById('bgMusic');
-const collectSound = document.getElementById('collectSound');
-const gameOverSound = document.getElementById('gameOverSound');
+      #menu button {
+        margin: 10px;
+        padding: 12px 24px;
+        font-size: 18px;
+        background: #444;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
 
-document.getElementById('pauseBtn').onclick = () => {
-  gamePaused = true;
-  document.getElementById('menuOverlay').style.display = 'block';
-};
+      #menu button:hover {
+        background: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HUD -->
+    <div id="hud">Score: 0 | Time: 0s</div>
 
-function resumeGame() {
-  gamePaused = false;
-  document.getElementById('menuOverlay').style.display = 'none';
-}
-function restartGame() {
-  location.reload();
-}
+    <!-- Floating Menu Button -->
+    <div id="menuButton">☰</div>
 
-// Start music on first interaction
-document.body.addEventListener('click', () => bgMusic.play(), { once: true });
+    <!-- Pause Menu -->
+    <div id="menu">
+      <h1>Game Paused</h1>
+      <button id="resumeBtn">Resume</button>
+      <button id="restartBtn">Restart</button>
+    </div>
 
-function updateScore(points) {
-  score += points * multiplier;
-  hud.innerText = `Score: ${score}`;
-}
+    <!-- A-Frame Scene -->
+    <a-scene>
+      <!-- Camera with cursor -->
+      <a-entity
+        id="camera"
+        camera
+        position="0 1.6 0"
+        look-controls
+        wasd-controls
+      >
+        <a-entity
+          cursor="fuse: true; fuseTimeout: 1500"
+          position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+          material="color: white; shader: flat"
+        ></a-entity>
+      </a-entity>
 
-function spawnObjects() {
-  if (gamePaused) return;
-  const scene = document.querySelector('a-scene');
-  const orb = document.createElement('a-sphere');
-  orb.setAttribute('radius', '0.3');
-  orb.setAttribute('color', '#39ff14');
-  orb.setAttribute('position', randomPosition());
-  orb.setAttribute('class', 'collectible');
-  orb.setAttribute('event-set__click', '_event: click; visible: false;');
-  orb.addEventListener('click', () => {
-    collectSound.play();
-    orb.remove();
-    updateScore(10);
-  });
-  scene.appendChild(orb);
+      <!-- VR Button -->
+      <a-entity id="vrButton" position="0 2 -2" text="value: Enter VR; color: white; align: center"></a-entity>
 
-  // 1 in 5 chance for a danger object
-  if (Math.random() < 0.2) {
-    const danger = document.createElement('a-box');
-    danger.setAttribute('color', '#ff3131');
-    danger.setAttribute('depth', '0.5');
-    danger.setAttribute('height', '0.5');
-    danger.setAttribute('width', '0.5');
-    danger.setAttribute('position', randomPosition());
-    danger.addEventListener('click', () => gameOver());
-    scene.appendChild(danger);
-  }
+      <!-- Aesthetic Grid Environment -->
+      <a-plane
+        rotation="-90 0 0"
+        width="30"
+        height="30"
+        color="#222"
+        material="shader: standard; wireframe: true"
+      ></a-plane>
 
-  // 1 in 7 chance for a power-up
-  if (Math.random() < 0.14) {
-    const power = document.createElement('a-octahedron');
-    power.setAttribute('color', '#00e6e6');
-    power.setAttribute('radius', '0.4');
-    power.setAttribute('position', randomPosition());
-    power.addEventListener('click', () => activatePowerUp(power));
-    scene.appendChild(power);
-  }
-}
+      <!-- Lighting -->
+      <a-entity light="type: ambient; color: #fff; intensity: 0.5"></a-entity>
+      <a-entity light="type: point; intensity: 1" position="0 5 0"></a-entity>
+    </a-scene>
 
-function randomPosition() {
-  const x = (Math.random() - 0.5) * 20;
-  const y = 1 + Math.random() * 2;
-  const z = -3 - Math.random() * 10;
-  return `${x} ${y} ${z}`;
-}
+    <script>
+      const hud = document.getElementById("hud");
+      const menu = document.getElementById("menu");
+      const menuButton = document.getElementById("menuButton");
+      const resumeBtn = document.getElementById("resumeBtn");
+      const restartBtn = document.getElementById("restartBtn");
+      const scene = document.querySelector("a-scene");
 
-function gameOver() {
-  gamePaused = true;
-  bgMusic.pause();
-  gameOverSound.play();
-  document.getElementById('menuOverlay').style.display = 'block';
-  document.querySelector('#menuOverlay div').innerText = 'Game Over';
-}
+      let score = 0;
+      let time = 0;
+      let gamePaused = false;
+      let gameOver = false;
 
-function activatePowerUp(el) {
-  el.remove();
-  if (powerUpActive) return;
-  powerUpActive = true;
-  multiplier = 2;
-  setTimeout(() => {
-    multiplier = 1;
-    powerUpActive = false;
-  }, 10000);
-}
+      // Update HUD
+      function updateHUD() {
+        hud.innerText = `Score: ${score} | Time: ${time}s`;
+      }
 
-// Spawn every 2.5 seconds
-spawnInterval = setInterval(spawnObjects, 2500);
-</script>
-</body>
+      // Timer
+      setInterval(() => {
+        if (!gamePaused && !gameOver) {
+          time++;
+          updateHUD();
+        }
+      }, 1000);
+
+      // Pause menu toggle
+      menuButton.addEventListener("click", () => {
+        gamePaused = true;
+        menu.style.display = "flex";
+      });
+
+      resumeBtn.addEventListener("click", () => {
+        gamePaused = false;
+        menu.style.display = "none";
+      });
+
+      restartBtn.addEventListener("click", () => {
+        window.location.reload();
+      });
+
+      // Spawn Orbs and Dangers
+      function spawnObjects() {
+        if (gamePaused || gameOver) return;
+
+        // Random position around player
+        const x = (Math.random() - 0.5) * 10;
+        const z = (Math.random() - 0.5) * 10;
+        const y = 1.5;
+
+        // Decide if orb or danger
+        const isOrb = Math.random() > 0.3;
+        const el = document.createElement("a-sphere");
+        el.setAttribute("position", `${x} ${y} ${z}`);
+        el.setAttribute("radius", "0.3");
+
+        if (isOrb) {
+          el.setAttribute("color", "#00f");
+          el.classList.add("orb");
+        } else {
+          el.setAttribute("color", "#f00");
+          el.classList.add("danger");
+        }
+
+        scene.appendChild(el);
+
+        // Add gaze interaction
+        el.addEventListener("mouseenter", () => {
+          if (isOrb) {
+            score++;
+            updateHUD();
+          } else {
+            gameOver = true;
+            alert("Game Over! Final Score: " + score);
+          }
+          el.parentNode.removeChild(el);
+        });
+
+        // Remove after 10s
+        setTimeout(() => {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        }, 10000);
+      }
+
+      setInterval(spawnObjects, 1500);
+
+      updateHUD();
+    </script>
+  </body>
 </html>
