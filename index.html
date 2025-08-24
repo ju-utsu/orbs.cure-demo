@@ -1,199 +1,201 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>VR Orb Collection Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      font-family: 'Arial', sans-serif;
-      background: #111;
-      color: #fff;
-    }
+  <head>
+    <title>VR Orb Collector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0d0d0d;
+        color: white;
+        text-align: center;
+      }
 
-    /* Main menu overlay */
-    #menu {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      z-index: 10;
-    }
+      #mainMenu {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(13, 13, 13, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
 
-    #menu h1 {
-      font-size: 2.5em;
-      margin-bottom: 20px;
-      color: #00ffff;
-      text-shadow: 0 0 15px #00ffff;
-    }
+      #mainMenu h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        color: #00ffff;
+      }
 
-    .slider-container {
-      margin: 20px;
-      width: 250px;
-    }
+      #mainMenu label {
+        display: block;
+        margin-top: 15px;
+      }
 
-    .slider-container label {
-      display: block;
-      margin-bottom: 10px;
-      font-size: 1.2em;
-    }
+      #mainMenu input {
+        margin-top: 5px;
+        padding: 8px;
+        border-radius: 6px;
+        border: none;
+        text-align: center;
+      }
 
-    .slider-container input {
-      width: 100%;
-    }
+      #startBtn {
+        margin-top: 25px;
+        padding: 12px 20px;
+        font-size: 18px;
+        background: #00ffff;
+        color: black;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
 
-    #startBtn {
-      background: #00ffff;
-      color: #111;
-      padding: 12px 30px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.2em;
-      cursor: pointer;
-      margin-top: 30px;
-      box-shadow: 0 0 10px #00ffff;
-      transition: all 0.3s ease;
-    }
+      #startBtn:hover {
+        background: #00cccc;
+      }
 
-    #startBtn:hover {
-      background: #0ff;
-      transform: scale(1.1);
-    }
+      #hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        font-size: 18px;
+        color: white;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 8px 15px;
+        border-radius: 10px;
+        display: none;
+      }
 
-    #vr-scene {
-      display: none; /* Hidden until Start Game is clicked */
-    }
-
-    #hud {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      font-size: 18px;
-      color: white;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 8px 12px;
-      border-radius: 8px;
-      display: none;
-    }
-  </style>
-</head>
-<body>
-  <!-- Main Menu -->
-  <div id="menu">
-    <h1>VR Orb Collector</h1>
-    <div class="slider-container">
-      <label for="gazeTime">Gaze Timer: <span id="gazeValue">1500</span> ms</label>
-      <input type="range" id="gazeTime" min="500" max="3000" step="100" value="1500">
+      a-scene {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Main Menu -->
+    <div id="mainMenu">
+      <h1>VR Orb Collector</h1>
+      <label>
+        Gaze Timer (ms):
+        <input type="number" id="gazeTime" value="1500" min="500" />
+      </label>
+      <label>
+        Number of Orbs:
+        <input type="number" id="numOrbs" value="15" min="5" />
+      </label>
+      <label>
+        Number of Dangers:
+        <input type="number" id="numDangers" value="8" min="1" />
+      </label>
+      <button id="startBtn">Start Game</button>
     </div>
-    <button id="startBtn">Start Game</button>
-  </div>
 
-  <!-- HUD -->
-  <div id="hud">Score: <span id="score">0</span></div>
+    <!-- HUD -->
+    <div id="hud">Score: 0</div>
 
-  <!-- VR Scene -->
-  <a-scene id="vr-scene" background="color: #000">
-    <!-- Camera + Cursor -->
-    <a-entity camera look-controls>
-      <a-entity cursor="fuse: true; fuseTimeout: 1500" 
-                position="0 0 -1" 
-                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                material="color: cyan; shader: flat">
+    <!-- VR Scene -->
+    <a-scene>
+      <a-assets>
+        <audio id="collect-sound" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3"></audio>
+      </a-assets>
+
+      <!-- Camera -->
+      <a-entity id="camera" camera look-controls>
+        <a-entity cursor="fuse: true; fuseTimeout: 1500" position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+          material="color: cyan; shader: flat">
+        </a-entity>
       </a-entity>
-    </a-entity>
 
-    <!-- Grid floor -->
-    <a-grid material="color: #0ff; opacity: 0.3" width="30" height="30"></a-grid>
+      <!-- Ground Grid -->
+      <a-entity geometry="primitive: plane; width: 100; height: 100"
+                material="color: #0d0d0d; shader: flat; wireframe: true; opacity: 0.2"
+                rotation="-90 0 0">
+      </a-entity>
 
-    <!-- Lights -->
-    <a-entity light="type: ambient; color: #666"></a-entity>
-    <a-entity light="type: point; intensity: 1.2; distance: 30; color: cyan" position="2 4 4"></a-entity>
+      <!-- Lighting -->
+      <a-entity light="type: ambient; intensity: 0.6"></a-entity>
+      <a-entity light="type: directional; intensity: 0.8" position="2 4 -2"></a-entity>
+    </a-scene>
 
-    <!-- Entities container -->
-    <a-entity id="orb-container"></a-entity>
-    <a-entity id="danger-container"></a-entity>
-  </a-scene>
+    <script>
+      const startBtn = document.getElementById("startBtn");
+      const mainMenu = document.getElementById("mainMenu");
+      const hud = document.getElementById("hud");
+      const scene = document.querySelector("a-scene");
+      const collectSound = document.querySelector("#collect-sound");
+      const cursor = document.querySelector("[cursor]");
 
-  <script>
-    const startBtn = document.getElementById('startBtn');
-    const menu = document.getElementById('menu');
-    const vrScene = document.getElementById('vr-scene');
-    const hud = document.getElementById('hud');
-    const scoreDisplay = document.getElementById('score');
-    const gazeSlider = document.getElementById('gazeTime');
-    const gazeValue = document.getElementById('gazeValue');
+      let score = 0;
+      let gazeTimeValue = 1500;
 
-    let score = 0;
-    let gazeTimeout = 1500;
+      startBtn.addEventListener("click", () => {
+        gazeTimeValue = parseInt(document.getElementById("gazeTime").value);
+        const numOrbs = parseInt(document.getElementById("numOrbs").value);
+        const numDangers = parseInt(document.getElementById("numDangers").value);
 
-    gazeSlider.addEventListener('input', () => {
-      gazeTimeout = parseInt(gazeSlider.value);
-      gazeValue.textContent = gazeTimeout;
-    });
+        cursor.setAttribute("cursor", `fuse: true; fuseTimeout: ${gazeTimeValue}`);
 
-    startBtn.addEventListener('click', () => {
-      menu.style.display = 'none';
-      vrScene.style.display = 'block';
-      hud.style.display = 'block';
-      document.querySelector('[cursor]').setAttribute('cursor', `fuse: true; fuseTimeout: ${gazeTimeout}`);
-      spawnEntities();
-    });
+        mainMenu.style.display = "none";
+        scene.style.display = "block";
+        hud.style.display = "block";
 
-    function spawnEntities() {
-      const orbContainer = document.getElementById('orb-container');
-      const dangerContainer = document.getElementById('danger-container');
+        spawnObjects(numOrbs, numDangers);
+      });
 
-      // Spawn Orbs
-      for (let i = 0; i < 10; i++) {
-        let orb = document.createElement('a-sphere');
-        orb.setAttribute('position', randomPosition());
-        orb.setAttribute('radius', '0.3');
-        orb.setAttribute('color', '#0ff');
-        orb.setAttribute('class', 'orb');
-        orb.setAttribute('animation', 'property: scale; dir: alternate; dur: 1000; easing: easeInOutSine; loop: true; to: 1.2 1.2 1.2');
-        orb.addEventListener('click', () => collectOrb(orb));
-        orbContainer.appendChild(orb);
+      function spawnObjects(orbsCount, dangersCount) {
+        for (let i = 0; i < orbsCount; i++) {
+          const orb = document.createElement("a-sphere");
+          orb.setAttribute("radius", "0.3");
+          orb.setAttribute("color", "#00ffff");
+          orb.setAttribute("position", randomPosition());
+          orb.setAttribute("class", "collectible");
+          scene.appendChild(orb);
+        }
+
+        for (let i = 0; i < dangersCount; i++) {
+          const danger = document.createElement("a-box");
+          danger.setAttribute("depth", "0.5");
+          danger.setAttribute("height", "0.5");
+          danger.setAttribute("width", "0.5");
+          danger.setAttribute("color", "red");
+          danger.setAttribute("position", randomPosition());
+          danger.setAttribute("class", "danger");
+          scene.appendChild(danger);
+        }
+
+        addInteractions();
       }
 
-      // Spawn Dangers
-      for (let i = 0; i < 5; i++) {
-        let danger = document.createElement('a-box');
-        danger.setAttribute('position', randomPosition());
-        danger.setAttribute('depth', '0.5');
-        danger.setAttribute('height', '0.5');
-        danger.setAttribute('width', '0.5');
-        danger.setAttribute('color', 'red');
-        danger.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 3000; easing: linear');
-        danger.addEventListener('click', () => triggerDanger(danger));
-        dangerContainer.appendChild(danger);
+      function randomPosition() {
+        const x = (Math.random() - 0.5) * 10;
+        const y = Math.random() * 2 + 0.5;
+        const z = (Math.random() - 0.5) * -10;
+        return `${x} ${y} ${z}`;
       }
-    }
 
-    function randomPosition() {
-      return `${(Math.random() * 8 - 4).toFixed(2)} 1.5 ${(Math.random() * -8).toFixed(2)}`;
-    }
+      function addInteractions() {
+        document.querySelectorAll(".collectible").forEach((orb) => {
+          orb.addEventListener("click", () => {
+            orb.parentNode.removeChild(orb);
+            score += 10;
+            hud.innerText = `Score: ${score}`;
+            collectSound.play();
+          });
+        });
 
-    function collectOrb(orb) {
-      score += 10;
-      scoreDisplay.textContent = score;
-      orb.parentNode.removeChild(orb);
-    }
-
-    function triggerDanger(danger) {
-      alert('You hit a danger! Game Over.');
-      location.reload();
-    }
-  </script>
-</body>
+        document.querySelectorAll(".danger").forEach((danger) => {
+          danger.addEventListener("click", () => {
+            danger.parentNode.removeChild(danger);
+            score -= 5;
+            hud.innerText = `Score: ${score}`;
+          });
+        });
+      }
+    </script>
+  </body>
 </html>
