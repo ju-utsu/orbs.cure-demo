@@ -1,173 +1,444 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neon Grid VR Game</title>
+  <meta charset="utf-8" />
+  <title>Tomato VR — Orb Collector (Polished)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <!-- A-Frame + environment component -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
+
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: 'Orbitron', sans-serif;
-      background: #000;
-      color: #0ff;
+    html,body{height:100%;margin:0;background:#030912;color:#fff;font-family:Inter,system-ui,Helvetica,Arial}
+    /* Small overlay HUD (fixed) */
+    #overlayHUD{
+      position:fixed;
+      left:12px;
+      top:12px;
+      z-index:9999;
+      background:rgba(4,8,16,0.6);
+      padding:8px 12px;
+      border-radius:10px;
+      font-weight:700;
+      font-size:14px;
+      color:#dff6ff;
+      box-shadow:0 6px 22px rgba(0,0,0,0.6);
     }
-    .menu-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #000;
-      z-index: 10;
+    #overlayHUD small{font-weight:600;color:#a6e6ff;opacity:.85;font-size:12px;margin-left:8px}
+    #toast{
+      position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+      background:rgba(0,0,0,0.7);padding:8px 12px;border-radius:10px;display:none;z-index:9998;font-size:13px;
     }
-    .menu {
-      background: rgba(0, 0, 0, 0.7);
-      border: 3px solid #0ff;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 30px #0ff;
-      text-align: center;
+    /* Start / Pause UI */
+    #startPanel{
+      position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:10000;
+      background:linear-gradient(180deg,#071428,#08203a);padding:18px;border-radius:12px;width:320px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.6)
     }
-    .menu h1 {
-      font-size: 2.5em;
-      color: #0ff;
-      margin-bottom: 20px;
-    }
-    .menu input, .menu select {
-      background: #000;
-      border: 2px solid #0ff;
-      color: #0ff;
-      padding: 8px;
-      margin: 10px 0;
-      width: 100%;
-      font-size: 1em;
-      text-align: center;
-    }
-    .menu button {
-      background: #0ff;
-      color: #000;
-      padding: 10px 20px;
-      margin-top: 15px;
-      border: none;
-      font-size: 1.2em;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .menu button:hover {
-      background: #000;
-      color: #0ff;
-      border: 2px solid #0ff;
-    }
-    a-scene {
-      display: none;
-    }
-    .scoreboard {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #0ff;
-      font-size: 1.5em;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 10px;
-      border: 2px solid #0ff;
-      border-radius: 8px;
-      display: none;
-      z-index: 5;
-    }
+    #startPanel h1{margin:0 0 12px 0;font-size:20px;color:#9be9ff}
+    #startPanel p{margin:0 0 14px 0;color:#bfeeff}
+    .btn{background:#18a0ff;border:none;color:#fff;padding:10px 16px;border-radius:8px;font-size:15px;cursor:pointer}
+    .btn.secondary{background:#444;margin-left:8px}
+    /* small responsive */
+    @media (max-width:420px){ #startPanel{width:90%} #overlayHUD{font-size:13px;padding:6px 8px} }
   </style>
 </head>
 <body>
-  <div class="menu-container" id="menu">
-    <div class="menu">
-      <h1>NEON GRID VR</h1>
-      <label>Number of Orbs:</label>
-      <input type="number" id="orbCount" value="10" min="1" max="50" />
-      <label>Spawn Interval (ms):</label>
-      <input type="number" id="spawnInterval" value="3000" min="500" />
-      <label>Difficulty:</label>
-      <select id="difficulty">
-        <option value="easy">Easy</option>
-        <option value="medium">Medium</option>
-        <option value="hard">Hard</option>
-      </select>
-      <button onclick="startGame()">Start Game</button>
+  <!-- Overlay HUD -->
+  <div id="overlayHUD">Score: <span id="scoreVal">0</span> <small>Time: <span id="timeVal">60</span>s</small></div>
+  <div id="toast"></div>
+
+  <!-- Start / instruction panel (required to unlock audio on mobile) -->
+  <div id="startPanel">
+    <h1>Tomato VR — Orb Collector</h1>
+    <p>Look at or tap orbs to collect them. Avoid red cubes. Collect power-ups for bonuses.</p>
+    <div>
+      <button id="startBtn" class="btn">Start Game</button>
+      <button id="howBtn" class="btn secondary">How to play</button>
     </div>
+    <p style="margin-top:10px;color:#99dfff;font-size:13px">Gaze time: 0.15s | Works on mobile & desktop</p>
   </div>
 
-  <div class="scoreboard" id="scoreboard">Score: 0</div>
-
-  <a-scene id="vrScene" vr-mode-ui="enabled: true">
+  <!-- A-Frame Scene -->
+  <a-scene renderer="antialias:true" background="color: #031026">
     <a-assets>
-      <a-asset-item id="orbModel" src="https://cdn.aframe.io/test-models/models/gltf/PrimaryIonThruster.glb"></a-asset-item>
+      <!-- Sounds -->
+      <audio id="bgm" src="https://cdn.aframe.io/basic-guide/audio/backgroundnoise.wav"></audio>
+      <audio id="collectSfx" src="https://cdn.aframe.io/basic-guide/audio/click.ogg"></audio>
+      <audio id="powerSfx" src="https://cdn.aframe.io/basic-guide/audio/boing.wav"></audio>
+      <audio id="gameOverSfx" src="https://cdn.aframe.io/basic-guide/audio/explosion.ogg"></audio>
     </a-assets>
 
-    <a-sky color="#000"></a-sky>
+    <!-- Environment (polished) -->
+    <a-entity environment="preset: forest; skyType: atmosphere; skyColor: #060b1a; fog: 0.06; groundColor: #071526; dressing: trees; dressingAmount: 8; lightPosition: 0 8 -2"></a-entity>
 
-    <a-entity position="0 1.6 0">
-      <a-camera look-controls></a-camera>
+    <!-- Camera rig + cursor (gaze fuse 150ms) -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-entity id="camera" camera look-controls>
+        <!-- 3D reticle ring (always visible in view) -->
+        <a-ring id="reticle" position="0 0 -0.95" radius-inner="0.01" radius-outer="0.02" material="color:#bfe5ff; shader:flat"></a-ring>
+
+        <!-- Cursor with fuse for gaze; short fuse to match 0.15s requirement -->
+        <a-entity cursor="fuse:true; fuseTimeout:150" raycaster="objects: .interactable; interval:50"></a-entity>
+
+        <!-- small 3D HUD inside VR (non-blocking) -->
+        <a-entity position="-0.38 0.36 -1">
+          <a-plane width="0.34" height="0.14" color="#000" material="opacity:0.35"></a-plane>
+          <a-text id="vrScore" value="Score: 0" color="#e6fbff" position="-0.16 -0.02 0.01" width="1.2"></a-text>
+        </a-entity>
+      </a-entity>
     </a-entity>
 
-    <a-plane rotation="-90 0 0" width="50" height="50" color="#111" material="wireframe: true; color: #0ff"></a-plane>
+    <!-- spawner containers -->
+    <a-entity id="collectSpawner"></a-entity>
+    <a-entity id="dangerSpawner"></a-entity>
+    <a-entity id="powerSpawner"></a-entity>
+
+    <!-- Game Over 3D panel -->
+    <a-entity id="gameOverPanel" visible="false">
+      <a-entity position="0 1.4 -1.2">
+        <a-plane width="1.0" height="0.5" color="#3a0d12" material="opacity:0.95"></a-plane>
+        <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01"></a-text>
+      </a-entity>
+    </a-entity>
+
   </a-scene>
 
-  <script>
-    let score = 0;
-    let orbCount;
-    let spawnInterval;
-    let difficulty;
-    let spawnedOrbs = 0;
-    let spawnTimer;
+<script>
+/* ---------- Game variables & utilities ---------- */
+const scene = document.querySelector('a-scene');
+const scoreVal = document.getElementById('scoreVal');
+const timeVal = document.getElementById('timeVal');
+const vrScore = document.getElementById('vrScore');
+const toast = document.getElementById('toast');
+const startPanel = document.getElementById('startPanel');
+const startBtn = document.getElementById('startBtn');
+const howBtn = document.getElementById('howBtn');
 
-    function startGame() {
-      orbCount = parseInt(document.getElementById('orbCount').value);
-      spawnInterval = parseInt(document.getElementById('spawnInterval').value);
-      difficulty = document.getElementById('difficulty').value;
+const collectSpawner = document.getElementById('collectSpawner');
+const dangerSpawner = document.getElementById('dangerSpawner');
+const powerSpawner = document.getElementById('powerSpawner');
 
-      document.getElementById('menu').style.display = 'none';
-      document.querySelector('a-scene').style.display = 'block';
-      document.getElementById('scoreboard').style.display = 'block';
+const bgm = document.getElementById('bgm');
+const sfxCollect = document.getElementById('collectSfx');
+const sfxPower = document.getElementById('powerSfx');
+const sfxGameOver = document.getElementById('gameOverSfx');
 
-      startSpawning();
-    }
+let state = {
+  running: false,
+  paused: false,
+  score: 0,
+  orbGazeMs: 150,     // gaze fuse below 200ms per user earlier preference
+  dangerGazeMs: 500,
+  totalOrbs: 30,
+  totalDanger: 12,
+  totalPowers: 4,
+  spawnedOrbs: 0,
+  spawnedDanger: 0,
+  spawnedPower: 0,
+  orbInterval: null,
+  dangerInterval: null,
+  powerInterval: null,
+  maxActiveOrbs: 30,
+  timers: new Map(),
+  roundTime: 60,
+  roundTimer: null,
+  doubleScoreUntil: 0,
+  spawnSlowUntil: 0
+};
 
-    function startSpawning() {
-      spawnTimer = setInterval(() => {
-        if (spawnedOrbs >= orbCount) {
-          clearInterval(spawnTimer);
-          return;
-        }
-        spawnOrb();
-        spawnedOrbs++;
-      }, spawnInterval);
-    }
+/* small helper */
+function showToast(str, ms=1400){
+  toast.textContent = str; toast.style.display='block';
+  clearTimeout(toast._t); toast._t = setTimeout(()=> toast.style.display='none', ms);
+}
 
-    function spawnOrb() {
-      const scene = document.querySelector('a-scene');
-      const orb = document.createElement('a-entity');
-      const x = Math.random() * 10 - 5;
-      const y = 1.6;
-      const z = -Math.random() * 10 - 3;
+/* set score */
+function setScore(v){
+  state.score = v;
+  scoreVal.textContent = v;
+  vrScore.setAttribute('value', `Score: ${v}`);
+}
 
-      orb.setAttribute('gltf-model', '#orbModel');
-      orb.setAttribute('position', `${x} ${y} ${z}`);
-      orb.setAttribute('scale', '0.5 0.5 0.5');
+/* ---------- Start / audio unlock ---------- */
+startBtn.addEventListener('click', ()=> {
+  // unlock audio on mobile
+  bgm.play().catch(()=>{});
+  sfxCollect.play().then(()=>sfxCollect.pause()).catch(()=>{});
+  // show HUD, hide start
+  startPanel.style.display = 'none';
+  startGame();
+});
+howBtn.addEventListener('click', ()=> {
+  alert('Look at (or tap) a yellow orb briefly to collect it.\nAvoid red cubes.\nBlue power-ups give bonuses (double score / slow spawn).');
+});
 
-      orb.setAttribute('class', 'orb');
-      orb.setAttribute('look-at', '[camera]');
+/* ---------- Spawning (staggered) ---------- */
+function randomPosAroundPlayer(minR=3, maxR=10){
+  const r = minR + Math.random()*(maxR - minR);
+  const theta = Math.random()*Math.PI*2;
+  const x = Math.cos(theta)*r;
+  const z = Math.sin(theta)*r;
+  const y = 0.9 + Math.random()*1.6;
+  return {x,y,z};
+}
 
-      orb.addEventListener('mouseenter', () => {
-        score++;
-        document.getElementById('scoreboard').innerText = `Score: ${score}`;
-        scene.removeChild(orb);
-      });
+function spawnCollectable(kind = 'orb'){ // kind: orb | double | slow
+  if(!state.running || state.paused) return;
+  const p = randomPosAroundPlayer();
+  const el = document.createElement(kind === 'orb' ? 'a-sphere' : 'a-sphere');
+  el.classList.add('interactable');
+  el.setAttribute('radius', kind==='orb' ? '0.28' : '0.32');
+  if(kind === 'orb') { el.setAttribute('color','#ffd84d'); el.setAttribute('emissive','#ffeb99'); el.dataset.kind='collect'; }
+  else if(kind === 'double') { el.setAttribute('color','#4fe4ff'); el.setAttribute('emissive','#8ff6ff'); el.dataset.kind='power-double'; }
+  else if(kind === 'slow') { el.setAttribute('color','#7be87b'); el.setAttribute('emissive','#c9ffd1'); el.dataset.kind='power-slow'; }
 
-      scene.appendChild(orb);
-    }
-  </script>
+  el.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
+  el.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800+Math.floor(Math.random()*1200)}; to: ${p.x} ${p.y+0.25} ${p.z}; loop:true; easing: easeInOutSine`);
+  // click event (fuse will trigger click) and mouse/touch fallback
+  el.addEventListener('click', (evt)=> onEntityActivated(el));
+  // also listen to mouseenter for non-fuse devices (optional redundancy)
+  el.addEventListener('mouseenter', ()=>{/* no-op: kept for possible local debugging */});
+  collectSpawner.appendChild(el);
+}
+
+function spawnDanger(){
+  if(!state.running || state.paused) return;
+  const p = randomPosAroundPlayer();
+  const bad = document.createElement('a-box');
+  bad.classList.add('interactable');
+  bad.setAttribute('width','0.45'); bad.setAttribute('height','0.45'); bad.setAttribute('depth','0.45');
+  bad.setAttribute('color','#d43b3b'); bad.setAttribute('position', `${p.x} ${Math.max(0.5,p.y-0.6)} ${p.z}`);
+  bad.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 6000; loop:true; easing: linear');
+  bad.dataset.kind = 'danger';
+  bad.addEventListener('click', ()=> onEntityActivated(bad));
+  dangerSpawner.appendChild(bad);
+}
+
+/* Staggered spawn controllers */
+function startStaggeredSpawns(){
+  // clear existing
+  if(state.orbInterval) clearInterval(state.orbInterval);
+  if(state.dangerInterval) clearInterval(state.dangerInterval);
+  if(state.powerInterval) clearInterval(state.powerInterval);
+  state.spawnedOrbs = 0; state.spawnedDanger = 0; state.spawnedPower = 0;
+
+  // Orbs: spawn 1 every 120ms until totalOrbs
+  state.orbInterval = setInterval(()=>{
+    if(state.spawnedOrbs < state.totalOrbs){
+      // add occasional power-ups (double and slow)
+      const r = Math.random();
+      if(r < 0.07 && state.spawnedPower < state.totalPowers){ spawnCollectable('double'); state.spawnedPower++; } 
+      else if(r >= 0.07 && r < 0.12 && state.spawnedPower < state.totalPowers){ spawnCollectable('slow'); state.spawnedPower++; }
+      else { spawnCollectable('orb'); }
+      state.spawnedOrbs++;
+    } else { clearInterval(state.orbInterval); }
+  }, 120);
+
+  // Danger: 1 every 420ms (slows down when slow-power active)
+  state.dangerInterval = setInterval(()=>{
+    if(state.spawnedDanger < state.totalDanger){
+      spawnDanger(); state.spawnedDanger++;
+    } else { clearInterval(state.dangerInterval); }
+  }, 420);
+}
+
+/* ---------- Activation handler (called on click/fuse) ---------- */
+function onEntityActivated(el){
+  if(!el || !el.dataset || !state.running || state.paused) return;
+  const kind = el.dataset.kind;
+  if(!kind) return;
+
+  // Collection depending on kind
+  if(kind === 'collect'){
+    // check double score
+    const now = Date.now();
+    const points = (now < state.doubleScoreUntil) ? 20 : 10;
+    // increment
+    setScore(state.score + points);
+    sfxCollect.play().catch(()=>{});
+    // particle burst
+    particleBurst(el.object3D.position);
+    // remove and respawn later
+    el.parentNode && el.parentNode.removeChild(el);
+    // spawn replacement after short delay to keep count stable
+    setTimeout(()=>{ if(state.running) spawnCollectable('orb'); }, 800);
+  } else if(kind === 'power-double'){
+    // double score for 10s
+    state.doubleScoreUntil = Date.now() + 10000;
+    showToast('Double Score! 10s');
+    sfxPower.play().catch(()=>{});
+    // remove
+    el.parentNode && el.parentNode.removeChild(el);
+  } else if(kind === 'power-slow'){
+    // slow spawns: increase spawn intervals (simulate by delaying next dangers spawn)
+    state.spawnSlowUntil = Date.now() + 8000;
+    showToast('Spawns slowed! 8s');
+    sfxPower.play().catch(()=>{});
+    el.parentNode && el.parentNode.removeChild(el);
+  } else if(kind === 'danger'){
+    // immediate game over
+    sfxGameOver.play().catch(()=>{});
+    triggerGameOver('Gazed at a danger cube');
+    // optionally remove the danger to avoid repeated triggers
+    try { el.parentNode && el.parentNode.removeChild(el); } catch(e){}
+  }
+}
+
+/* ---------- particle effect ---------- */
+function particleBurst(pos){
+  for(let i=0;i<10;i++){
+    const p = document.createElement('a-sphere');
+    p.setAttribute('radius','0.04'); p.setAttribute('material','color:#fff; shader:flat');
+    p.object3D.position.copy(pos);
+    scene.appendChild(p);
+    const dx = pos.x + (Math.random()-0.5)*0.8;
+    const dy = pos.y + Math.random()*1.0 + 0.2;
+    const dz = pos.z + (Math.random()-0.5)*0.8;
+    p.setAttribute('animation__m', `property: position; to: ${dx} ${dy} ${dz}; dur: 520; easing: easeOutQuad`);
+    p.setAttribute('animation__f', `property: material.opacity; to:0; dur:520; delay:180`);
+    setTimeout(()=>{ p.parentNode && p.parentNode.removeChild(p); }, 700);
+  }
+}
+
+/* ---------- Game over & restart ---------- */
+function triggerGameOver(msg){
+  state.running = false; state.paused = true;
+  document.getElementById('gameOverText').setAttribute('value', msg);
+  document.getElementById('gameOverPanel').setAttribute('visible','true');
+  showToast('Game Over', 2200);
+  sfxGameOver.play().catch(()=>{});
+  // stop timers
+  if(state.orbInterval) clearInterval(state.orbInterval);
+  if(state.dangerInterval) clearInterval(state.dangerInterval);
+  if(state.powerInterval) clearInterval(state.powerInterval);
+}
+
+function restartGame(){
+  // clear timers and entities
+  state.timers.forEach(t=>clearTimeout(t)); state.timers.clear();
+  Array.from(collectSpawner.children).forEach(c=>c.remove());
+  Array.from(dangerSpawner.children).forEach(d=>d.remove());
+  Array.from(powerSpawner.children).forEach(p=>p.remove());
+  setScore(0);
+  document.getElementById('gameOverPanel').setAttribute('visible','false');
+  state.running = true; state.paused = false;
+  startRoundTimer();
+  startStaggeredSpawns();
+  showToast('Restarted');
+}
+
+/* ---------- Round timer ---------- */
+function startRoundTimer(){
+  if(state.roundTimer) clearInterval(state.roundTimer);
+  state.roundTime = 60;
+  timeVal.textContent = state.roundTime;
+  state.roundTimer = setInterval(()=>{
+    if(!state.running || state.paused) return;
+    // if spawn slowed, extend time slower (we keep timer same but spawn frequency reduced elsewhere)
+    state.roundTime -= 1;
+    timeVal.textContent = state.roundTime;
+    if(state.roundTime <= 0){ clearInterval(state.roundTimer); triggerGameOver(\"Time's up!\"); }
+  }, 1000);
+}
+
+/* ---------- Spawn-rate adjuster for slow-power ---------- */
+(function spawnRateAdjuster(){
+  // This loop adjusts danger spawn interval if slow power active.
+  // We'll implement by clearing and re-scheduling dangerInterval with adjusted period.
+  let baseDangerInterval = 420; // ms
+  function rescheduleDanger(){
+    if(state.dangerInterval) clearInterval(state.dangerInterval);
+    // if slow-power active, double the interval
+    const now = Date.now();
+    const interval = (now < state.spawnSlowUntil) ? baseDangerInterval * 2 : baseDangerInterval;
+    state.dangerInterval = setInterval(()=>{
+      if(state.spawnedDanger < state.totalDanger && state.running && !state.paused){
+        spawnDanger(); state.spawnedDanger++;
+      } else if(state.spawnedDanger >= state.totalDanger){
+        clearInterval(state.dangerInterval);
+      }
+    }, interval);
+  }
+  // call periodically to adapt when power toggles
+  setInterval(()=>{ if(state.running) rescheduleDanger(); }, 1000);
+})();
+
+/* ---------- Input bindings: Menu & Restart ---------- */
+const startPanelClose = () => {
+  startPanel.style.display = 'none';
+};
+
+const openMenu = () => {
+  state.paused = true;
+  document.getElementById('menuOverlay')?.style && (document.getElementById('menuOverlay').style.display = 'block');
+  // show HTML overlay panel (we reused startPanel element for simplicity)
+  startPanel.style.display = 'block';
+  startPanel.querySelector('h1').textContent = 'Paused';
+};
+
+const closeMenu = () => {
+  state.paused = false;
+  startPanel.style.display = 'none';
+};
+
+startPanel.querySelector('#startBtn')?.addEventListener('click', ()=>{
+  // already handled above - keep
+});
+document.getElementById('startBtn').addEventListener('click', ()=> {}); // already bound
+
+// Provide small pause/overlay controls via keyboard for desktop debugging
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'p'){ state.paused = !state.paused; showToast(state.paused ? 'Paused' : 'Resumed'); }
+  if(e.key === 'r'){ restartGame(); }
+});
+
+/* ---------- Start game flow ---------- */
+function startGame(){
+  state.running = true;
+  state.paused = false;
+  setScore(0);
+  startRoundTimer();
+  startStaggeredSpawns();
+  // Start background music loop gently
+  try{ bgm.loop = true; bgm.volume = 0.45; bgm.play().catch(()=>{}); }catch(e){}
+  showToast('Game started — Good luck!', 1400);
+}
+
+/* Hook up the start panel button properly (ensures single binding) */
+document.getElementById('startBtn').onclick = function(){
+  // hide overlay, unlock audio, start
+  startPanel.style.display = 'none';
+  try{ bgm.play().catch(()=>{}); }catch(e){}
+  startGame();
+};
+document.getElementById('howBtn').onclick = ()=>{ alert('Gaze for 0.15s or tap to collect. Yellow = normal, Blue = double score, Green = slow spawns. Red = danger -> Game Over.'); };
+document.getElementById('saveSettings')?.addEventListener('click', ()=>{
+  // collect values if present (menu overlay reused)
+  const vOrb = parseInt(document.getElementById('orbGazeInput')?.value || state.orbGazeMs);
+  const vDanger = parseInt(document.getElementById('dangerGazeInput')?.value || state.dangerGazeMs);
+  if(!isNaN(vOrb)) state.orbGazeMs = vOrb;
+  if(!isNaN(vDanger)) state.dangerGazeMs = vDanger;
+  closeMenu();
+});
+
+/* small periodic housekeeping: remove far-away objects to keep scene light */
+setInterval(()=>{
+  // remove objects beyond 80m (cleanup)
+  Array.from(collectSpawner.children).forEach(el => {
+    const p = el.object3D.position;
+    if(Math.abs(p.x) > 80 || Math.abs(p.z) > 80) el.parentNode && el.parentNode.removeChild(el);
+  });
+}, 5000);
+
+/* exported restart button (if present) */
+document.getElementById('restartBtn')?.addEventListener('click', ()=> restartGame());
+
+/* ---------- Utility: ensure scene ready before starting spawn timers if user starts later ---------- */
+scene.addEventListener('loaded', ()=>{
+  // keep scene ready
+});
+
+/* End of script */
+</script>
 </body>
-</html>
+        </html>
