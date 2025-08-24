@@ -1,241 +1,405 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>VR Neon Orb Collector</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-  <style>
-    body { margin: 0; font-family: 'Orbitron', sans-serif; }
-    /* Neon Menu */
-    #menu {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: radial-gradient(circle at center, #0d0d0d, #000);
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      color: #0ff;
-      text-align: center;
-    }
-    #menu h1 {
-      font-size: 3em;
-      color: #0ff;
-      text-shadow: 0 0 20px #0ff;
-      margin-bottom: 20px;
-    }
-    .setting {
-      margin: 10px 0;
-      font-size: 1.2em;
-    }
-    input, select {
-      background: #000;
-      border: 2px solid #0ff;
-      color: #0ff;
-      padding: 8px;
-      font-size: 1em;
-      width: 180px;
-      text-align: center;
-    }
-    #start-btn {
-      margin-top: 20px;
-      padding: 15px 40px;
-      font-size: 1.5em;
-      color: #0ff;
-      background: transparent;
-      border: 3px solid #0ff;
-      cursor: pointer;
-      text-shadow: 0 0 10px #0ff;
-      box-shadow: 0 0 20px #0ff;
-      transition: 0.3s;
-    }
-    #start-btn:hover {
-      background: #0ff;
-      color: #000;
-      text-shadow: none;
-    }
-    /* Score */
-    #scoreUI {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      font-size: 24px;
-      color: #0ff;
-      text-shadow: 0 0 10px #0ff;
-      display: none;
-    }
-    #gameOver {
-      display: none;
-      position: fixed;
-      width: 100%; height: 100%;
-      top: 0; left: 0;
-      background: rgba(0,0,0,0.9);
-      color: #fff;
-      text-align: center;
-      justify-content: center; align-items: center;
-      flex-direction: column;
-      font-size: 2em;
-    }
-    #restart-btn {
-      margin-top: 20px;
-      padding: 15px 30px;
-      font-size: 1.2em;
-      color: #0ff;
-      background: transparent;
-      border: 2px solid #0ff;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="utf-8" />
+<title>Neon VR — Orb Collector (3D Menu)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no" />
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
+<style>
+  html,body{height:100%;margin:0;background:#000;font-family:Inter,system-ui,Arial}
+  /* HUD overlay (small) */
+  #hud { position: fixed; left: 12px; top: 12px; z-index: 9999; background: rgba(0,0,0,0.4);
+          padding:8px 10px; border-radius:8px; font-weight:700; color:#00f0ff; font-size:13px; box-shadow:0 6px 24px rgba(0,255,240,0.06);}
+  #toast { position: fixed; left:50%; bottom:18px; transform:translateX(-50%); background: rgba(0,0,0,0.7);
+           padding:8px 12px; border-radius:10px; display:none; color:#fff; z-index:9998; }
+  /* Neon 3D menu appearance (CSS only used for fallback overlay states) */
+  .vis-hidden{ display:none !important; }
+</style>
 </head>
 <body>
-  <!-- Neon Menu -->
-  <div id="menu">
-    <h1>VR Neon Orb Collector</h1>
-    <div class="setting">
-      <label>Number of Orbs:</label><br>
-      <input type="number" id="orbCount" value="10" min="1" max="50">
-    </div>
-    <div class="setting">
-      <label>Number of Dangers:</label><br>
-      <input type="number" id="dangerCount" value="5" min="0" max="30">
-    </div>
-    <div class="setting">
-      <label>Gaze Time (ms):</label><br>
-      <input type="number" id="gazeTime" value="1500" min="500" max="5000">
-    </div>
-    <div class="setting">
-      <label>Background Style:</label><br>
-      <select id="bgStyle">
-        <option value="grid">Neon Grid</option>
-        <option value="dark">Dark Space</option>
-      </select>
-    </div>
-    <div class="setting">
-      <label>Music:</label><br>
-      <select id="musicToggle">
-        <option value="on">On</option>
-        <option value="off">Off</option>
-      </select>
-    </div>
-    <button id="start-btn">START GAME</button>
-  </div>
+  <div id="hud" class="vis-hidden">Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s</div>
+  <div id="toast"></div>
 
-  <!-- Score -->
-  <div id="scoreUI">Score: 0</div>
+  <!-- A-Frame Scene -->
+  <a-scene renderer="antialias:true" background="color:#030711" vr-mode-ui="enterVRButton: true" embedded>
 
-  <!-- Game Over -->
-  <div id="gameOver">
-    <div>Game Over!</div>
-    <button id="restart-btn">Restart</button>
-  </div>
+    <a-assets>
+      <!-- small sounds -->
+      <audio id="collectSound" src="https://cdn.aframe.io/basic-guide/audio/click.ogg"></audio>
+      <audio id="dangerSound" src="https://cdn.aframe.io/basic-guide/audio/explosion.ogg"></audio>
+    </a-assets>
 
-  <!-- VR Scene -->
-  <a-scene embedded vr-mode-ui="enabled: true" id="vrScene" style="display:none;">
-    <a-entity id="cameraRig" position="0 1.6 0">
-      <a-camera look-controls wasd-controls>
-        <a-cursor
-          id="cursor"
-          fuse="true"
-          fuse-timeout="1500"
-          material="color: #0ff; shader: flat"
-          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03">
-        </a-cursor>
-      </a-camera>
+    <!-- Neon animated grid plane (large) -->
+    <!-- SVG grid data URL (neon lines) -->
+    <a-asset-item id="unused"></a-asset-item>
+    <a-entity id="neonGrid" position="0 0 0">
+      <a-plane id="gridPlane" rotation="-90 0 0" width="120" height="120" material="src: url('data:image/svg+xml;utf8,\
+      <svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2264%22 height=%2264%22 viewBox=%220 0 64 64%22>\
+        <rect width=%2264%22 height=%2264%22 fill=%22%23000%22/>\
+        <g stroke=%22%23b3ffff%22 stroke-opacity=%220.12%22 stroke-width=%221%22>\
+          <path d=%22M0 16 H64 M0 32 H64 M0 48 H64 M16 0 V64 M32 0 V64 M48 0 V64%22/>\
+        </g>\
+      </svg>'); repeat: 20 20; transparent:true"></a-plane>
     </a-entity>
-    <!-- Dynamic Environment -->
-    <a-entity id="environment"></a-entity>
+
+    <!-- Environment (subtle sky + atmosphere) -->
+    <a-entity environment="preset: none; skyType: gradient; skyColor: #001428; horizonColor: #001020; groundColor: #041427; fog: 0.06; lightPosition: 0 6 0;"></a-entity>
+
+    <!-- Camera rig -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-entity id="camera" camera look-controls>
+        <!-- visible reticle ring (works both with mouse and VR gaze) -->
+        <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.014" material="color:#00f0ff; shader:flat"></a-ring>
+        <!-- raycaster for detecting intersections -->
+        <a-entity id="raycaster" raycaster="objects: .interactable; interval: 40"></a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- Menu panel (3D) - will be positioned in front of camera on load -->
+    <a-entity id="menuPanel" class="interactable ui" visible="true">
+      <!-- background neon panel -->
+      <a-plane id="menuBg" width="1.6" height="1.1" color="#020816" material="opacity:0.95"></a-plane>
+
+      <!-- Title (neon styled using emissive color) -->
+      <a-text id="menuTitle" value="NEON ORB COLLECTOR" position="-0.75 0.38 0.01" color="#00f0ff" width="2" font="mozillavr"></a-text>
+
+      <!-- Orb count label -->
+      <a-text value="Orbs:" position="-0.78 0.14 0.01" color="#9ff8ff" width="1.2"></a-text>
+      <a-text id="orbCountText" value="20" position="0.4 0.14 0.01" color="#fff" width="0.8"></a-text>
+      <a-box id="orbMinus" class="interactable ui control" position="-0.05 0.14 0.02" width="0.12" height="0.12" depth="0.02" color="#071d2a"></a-box>
+      <a-text value="-" position="-0.05 0.115 0.03" color="#00f0ff"></a-text>
+      <a-box id="orbPlus" class="interactable ui control" position="0.65 0.14 0.02" width="0.12" height="0.12" depth="0.02" color="#071d2a"></a-box>
+      <a-text value="+" position="0.65 0.115 0.03" color="#00f0ff"></a-text>
+
+      <!-- Danger count -->
+      <a-text value="Dangers:" position="-0.78 -0.06 0.01" color="#ff9f9f" width="1.2"></a-text>
+      <a-text id="dangerCountText" value="8" position="0.4 -0.06 0.01" color="#fff" width="0.8"></a-text>
+      <a-box id="dangerMinus" class="interactable ui control" position="-0.05 -0.06 0.02" width="0.12" height="0.12" depth="0.02" color="#2b0f0f"></a-box>
+      <a-text value="-" position="-0.05 -0.085 0.03" color="#ff7f7f"></a-text>
+      <a-box id="dangerPlus" class="interactable ui control" position="0.65 -0.06 0.02" width="0.12" height="0.12" depth="0.02" color="#2b0f0f"></a-box>
+      <a-text value="+" position="0.65 -0.085 0.03" color="#ff7f7f"></a-text>
+
+      <!-- Gaze time -->
+      <a-text value="Gaze (ms):" position="-0.78 -0.26 0.01" color="#bfe5ff" width="1.2"></a-text>
+      <a-text id="gazeText" value="150" position="0.4 -0.26 0.01" color="#fff" width="0.8"></a-text>
+      <a-box id="gazeMinus" class="interactable ui control" position="-0.05 -0.26 0.02" width="0.12" height="0.12" depth="0.02" color="#071d2a"></a-box>
+      <a-text value="-" position="-0.05 -0.285 0.03" color="#00f0ff"></a-text>
+      <a-box id="gazePlus" class="interactable ui control" position="0.65 -0.26 0.02" width="0.12" height="0.12" depth="0.02" color="#071d2a"></a-box>
+      <a-text value="+" position="0.65 -0.285 0.03" color="#00f0ff"></a-text>
+
+      <!-- Background style -->
+      <a-text value="Background:" position="-0.78 -0.46 0.01" color="#9ff8ff" width="1.2"></a-text>
+      <a-box id="bgGrid" class="interactable ui option" position="-0.05 -0.46 0.02" width="0.5" height="0.08" depth="0.02" color="#061a2a"></a-box>
+      <a-text value="Neon Grid" position="0.18 -0.46 0.03" color="#00f0ff" width="0.8"></a-text>
+      <a-box id="bgDark" class="interactable ui option" position="0.55 -0.46 0.02" width="0.45" height="0.08" depth="0.02" color="#081018"></a-box>
+      <a-text value="Dark" position="0.75 -0.46 0.03" color="#9ff8ff" width="0.6"></a-text>
+
+      <!-- Start button (big neon) -->
+      <a-box id="startBtn" class="interactable ui" position="0 0.5 0.02" width="1.1" height="0.18" depth="0.02" color="#052233" material="opacity:0.98"></a-box>
+      <a-text value="START GAME" position="-0.5 0.5 0.03" color="#00f0ff" width="1.8"></a-text>
+    </a-entity>
+
+    <!-- Spawners and game objects (initially empty) -->
+    <a-entity id="collect-spawner"></a-entity>
+    <a-entity id="danger-spawner"></a-entity>
+
+    <!-- Game over panel (3D) shown in front of player -->
+    <a-entity id="gameOverPanel" visible="false">
+      <a-entity position="0 1.4 -1.0">
+        <a-plane width="1.0" height="0.5" color="#200" material="opacity:0.95"></a-plane>
+        <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01"></a-text>
+      </a-entity>
+    </a-entity>
+
   </a-scene>
 
-  <script>
-    const startBtn = document.getElementById('start-btn');
-    const menu = document.getElementById('menu');
-    const vrScene = document.getElementById('vrScene');
-    const scoreUI = document.getElementById('scoreUI');
-    const gameOverUI = document.getElementById('gameOver');
-    const restartBtn = document.getElementById('restart-btn');
+<script>
+/* ---------- State ---------- */
+const state = {
+  running: false,
+  paused: false,
+  score: 0,
+  orbGazeMs: 150,
+  dangerGazeMs: 500,
+  totals: { orbs: 20, dangers: 8 },
+  selectedBackground: 'grid',
+  spawnedOrbs: 0,
+  spawnedDanger: 0,
+  orbInterval: null,
+  dangerInterval: null,
+  timers: new Map(),
+  roundTime: 60,
+  roundTimer: null
+};
 
-    let score = 0;
-    let totalOrbs = 0;
-    let orbsCollected = 0;
+/* ---------- DOM refs ---------- */
+const scene = document.querySelector('a-scene');
+const cameraEl = document.getElementById('camera');
+const ray = document.getElementById('raycaster');
+const reticle = document.getElementById('reticle');
+const menuPanel = document.getElementById('menuPanel');
+const collectSpawner = document.getElementById('collect-spawner');
+const dangerSpawner = document.getElementById('danger-spawner');
+const hud = document.getElementById('hud');
+const scoreVal = document.getElementById('scoreVal');
+const vrScore = document.getElementById('vrScore');
+const toast = document.getElementById('toast');
+const gameOverPanel = document.getElementById('gameOverPanel');
 
-    startBtn.addEventListener('click', () => {
-      const orbCount = parseInt(document.getElementById('orbCount').value);
-      const dangerCount = parseInt(document.getElementById('dangerCount').value);
-      const gazeTime = parseInt(document.getElementById('gazeTime').value);
-      const bgStyle = document.getElementById('bgStyle').value;
-      const music = document.getElementById('musicToggle').value;
+/* menu controls text elements */
+const orbCountText = document.getElementById('orbCountText');
+const dangerCountText = document.getElementById('dangerCountText');
+const gazeText = document.getElementById('gazeText');
 
-      menu.style.display = 'none';
-      vrScene.style.display = 'block';
-      scoreUI.style.display = 'block';
+/* interactive elements */
+const orbMinus = document.getElementById('orbMinus');
+const orbPlus = document.getElementById('orbPlus');
+const dangerMinus = document.getElementById('dangerMinus');
+const dangerPlus = document.getElementById('dangerPlus');
+const gazeMinus = document.getElementById('gazeMinus');
+const gazePlus = document.getElementById('gazePlus');
+const bgGrid = document.getElementById('bgGrid');
+const bgDark = document.getElementById('bgDark');
+const startBtn = document.getElementById('startBtn');
 
-      document.querySelector('#cursor').setAttribute('fuse-timeout', gazeTime);
-      setupEnvironment(bgStyle);
-      spawnObjects(orbCount, dangerCount);
-      totalOrbs = orbCount;
-    });
+/* ---------- helpers ---------- */
+function showToast(msg, ms=1100){ toast.textContent = msg; toast.style.display = 'block'; clearTimeout(toast._t); toast._t = setTimeout(()=> toast.style.display = 'none', ms); }
+function setScore(v){ state.score = v; scoreVal.textContent = v; if(vrScore) vrScore.setAttribute('value', `Score: ${v}`); }
 
-    function setupEnvironment(style) {
-      const env = document.getElementById('environment');
-      if (style === 'grid') {
-        env.innerHTML = `<a-plane rotation="-90 0 0" width="50" height="50" color="#111" 
-                           material="shader: flat; repeat: 50 50; src: https://cdn.aframe.io/a-painter/images/floor.jpg"></a-plane>`;
-      } else {
-        env.innerHTML = `<a-sky color="#000"></a-sky>`;
-      }
+/* ---------- position menu in front of player ---------- */
+function placeMenuInFront(distance=1.2, rightOffset=0, downOffset=0.1){
+  const cam = document.getElementById('camera').object3D;
+  if(!cam) return;
+  const pos = new THREE.Vector3(); cam.getWorldPosition(pos);
+  const dir = new THREE.Vector3(); cam.getWorldDirection(dir);
+  const right = new THREE.Vector3(); right.crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+  dir.multiplyScalar(distance);
+  right.multiplyScalar(rightOffset);
+  pos.add(dir).add(right);
+  pos.y -= downOffset;
+  menuPanel.object3D.position.copy(pos);
+  // face the camera
+  const look = new THREE.Vector3(); cam.getWorldPosition(look);
+  menuPanel.object3D.lookAt(look);
+  // keep small forward offset to avoid z-fighting
+  menuPanel.object3D.translateZ(0.01);
+}
+
+/* keep menu in front on load and when entering VR */
+scene.addEventListener('loaded', ()=> placeMenuInFront(1.2, 0, 0.12));
+scene.addEventListener('enter-vr', ()=> setTimeout(()=> placeMenuInFront(1.2,0,0.12),120));
+setInterval(()=>{ if(scene.is('loaded')) placeMenuInFront(); }, 1500);
+
+/* ---------- UI binding helper (gaze + click) ---------- */
+function uiBind(el, cb, dwell=220){
+  // gaze (mouseenter/mouseleave)
+  el.addEventListener('mouseenter', ()=>{
+    el._ui_to = setTimeout(()=> cb(), dwell);
+  });
+  el.addEventListener('mouseleave', ()=>{
+    if(el._ui_to){ clearTimeout(el._ui_to); el._ui_to = null; }
+  });
+  // click fallback for desktop
+  el.addEventListener('click', (e)=> { e.stopPropagation(); cb(); });
+}
+
+/* ---------- Menu interactions ---------- */
+orbCountText.setAttribute('value', state.totals.orbs);
+dangerCountText.setAttribute('value', state.totals.dangers);
+gazeText.setAttribute('value', state.orbGazeMs);
+
+uiBind(orbPlus, ()=>{ state.totals.orbs = Math.min(60, state.totals.orbs+1); orbCountText.setAttribute('value', state.totals.orbs); });
+uiBind(orbMinus, ()=>{ state.totals.orbs = Math.max(1, state.totals.orbs-1); orbCountText.setAttribute('value', state.totals.orbs); });
+uiBind(dangerPlus, ()=>{ state.totals.dangers = Math.min(40, state.totals.dangers+1); dangerCountText.setAttribute('value', state.totals.dangers); });
+uiBind(dangerMinus, ()=>{ state.totals.dangers = Math.max(0, state.totals.dangers-1); dangerCountText.setAttribute('value', state.totals.dangers); });
+uiBind(gazePlus, ()=>{ state.orbGazeMs = Math.min(5000, state.orbGazeMs+50); gazeText.setAttribute('value', state.orbGazeMs); });
+uiBind(gazeMinus, ()=>{ state.orbGazeMs = Math.max(20, state.orbGazeMs-50); gazeText.setAttribute('value', state.orbGazeMs); });
+
+uiBind(bgGrid, ()=>{ state.selectedBackground = 'grid'; bgGrid.setAttribute('color','#103143'); bgDark.setAttribute('color','#081018'); showToast('Background: Neon Grid'); });
+uiBind(bgDark, ()=>{ state.selectedBackground = 'dark'; bgDark.setAttribute('color','#103143'); bgGrid.setAttribute('color','#061a2a'); showToast('Background: Dark'); });
+
+/* ---------- Start game ---------- */
+uiBind(startBtn, ()=> startGame(), 400);
+
+/* ---------- spawn helpers ---------- */
+function randPos(){
+  const r = 3 + Math.random()*8;
+  const a = Math.random()*Math.PI*2;
+  const y = 0.9 + Math.random()*1.6;
+  return { x: Math.cos(a)*r, y, z: Math.sin(a)*r };
+}
+
+function spawnOrb(){
+  const p = randPos();
+  const orb = document.createElement('a-sphere');
+  orb.classList.add('interactable','collectable');
+  orb.setAttribute('radius','0.28');
+  orb.setAttribute('color','#ffd84d');
+  orb.setAttribute('emissive','#ffeb99');
+  orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
+  orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${2000+Math.floor(Math.random()*1000)}; to: ${p.x} ${p.y+0.25} ${p.z}; loop: true; easing: easeInOutSine`);
+  orb.dataset.gaze = 'collect';
+  collectSpawner.appendChild(orb);
+}
+
+function spawnDanger(){
+  const p = randPos();
+  const bad = document.createElement('a-box');
+  bad.classList.add('interactable','danger');
+  bad.setAttribute('width','0.48'); bad.setAttribute('height','0.48'); bad.setAttribute('depth','0.48');
+  bad.setAttribute('color','#d43b3b');
+  bad.setAttribute('position', `${p.x} ${Math.max(0.5,p.y-0.6)} ${p.z}`);
+  bad.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
+  bad.dataset.gaze = 'danger';
+  dangerSpawner.appendChild(bad);
+}
+
+/* staggered spawn */
+function startStaggeredSpawns(){
+  // clear any existing
+  if(state.orbInterval) clearInterval(state.orbInterval);
+  if(state.dangerInterval) clearInterval(state.dangerInterval);
+  state.spawnedOrbs = 0; state.spawnedDanger = 0;
+  state.orbInterval = setInterval(()=>{
+    if(state.spawnedOrbs < state.totals.orbs){ spawnOrb(); state.spawnedOrbs++; }
+    else clearInterval(state.orbInterval);
+  }, 140);
+  state.dangerInterval = setInterval(()=>{
+    if(state.spawnedDanger < state.totals.dangers){ spawnDanger(); state.spawnedDanger++; }
+    else clearInterval(state.dangerInterval);
+  }, 420);
+}
+
+/* ---------- Gaze game logic ---------- */
+ray.addEventListener('raycaster-intersection', (evt)=>{
+  const els = evt.detail.els || (evt.detail.intersections && evt.detail.intersections.map(i=>i.object.el));
+  const el = els && els.length ? els[0] : null;
+  if(el && el !== window.__hovered){ if(window.__hovered) clearHover(window.__hovered); startHover(el); window.__hovered = el; }
+});
+ray.addEventListener('raycaster-intersection-cleared', ()=>{
+  if(window.__hovered) clearHover(window.__hovered);
+  window.__hovered = null;
+  reticle.setAttribute('color','#00f0ff');
+  reticle.setAttribute('scale','1 1 1');
+});
+
+function startHover(el){
+  if(!el) return;
+  const kind = el.dataset && el.dataset.gaze ? el.dataset.gaze : (el.classList.contains('ui')? 'ui': null);
+  if(!kind) return;
+  // reticle feedback
+  if(kind==='collect') reticle.setAttribute('color','#ffd84d');
+  else if(kind==='danger') reticle.setAttribute('color','#ff4d4d');
+  else reticle.setAttribute('color','#6ec1ff');
+  reticle.setAttribute('scale','1.6 1.6 1');
+  // scale UI items slightly
+  if(el.classList.contains('ui') || el.classList.contains('control')) el.object3D.scale.set(1.12,1.12,1.12);
+
+  if(!state.running || state.paused) return;
+  const ms = kind==='collect' ? state.orbGazeMs : (kind==='danger' ? state.dangerGazeMs : 250);
+  const to = setTimeout(()=>{
+    if(!state.running || state.paused) return;
+    if(kind==='collect'){
+      const pos = el.object3D.position;
+      particleBurst(pos);
+      document.getElementById('collectSound').play().catch(()=>{});
+      el.parentNode && el.parentNode.removeChild(el);
+      setScore(state.score+1);
+      // spawn replacement after short delay
+      setTimeout(()=> spawnOrb(), 700);
+    } else if(kind==='danger'){
+      document.getElementById('dangerSound').play().catch(()=>{});
+      triggerGameOver('Gazed at danger');
+    } else if(kind==='ui'){
+      // For the menu controls, the UI handlers are bound already via uiBind()
+      // This block is for any other UI items
     }
+  }, ms);
+  state.timers.set(el,to);
+}
 
-    function spawnObjects(orbs, dangers) {
-      for (let i = 0; i < orbs; i++) {
-        const x = (Math.random() - 0.5) * 20;
-        const z = (Math.random() - 0.5) * 20;
-        const orb = document.createElement('a-sphere');
-        orb.setAttribute('position', `${x} 1.5 ${z}`);
-        orb.setAttribute('radius', '0.3');
-        orb.setAttribute('color', '#0ff');
-        orb.classList.add('orb');
-        orb.setAttribute('cursor-listener', '');
-        document.querySelector('a-scene').appendChild(orb);
-      }
-      for (let i = 0; i < dangers; i++) {
-        const x = (Math.random() - 0.5) * 20;
-        const z = (Math.random() - 0.5) * 20;
-        const danger = document.createElement('a-box');
-        danger.setAttribute('position', `${x} 1.5 ${z}`);
-        danger.setAttribute('color', 'red');
-        danger.classList.add('danger');
-        danger.setAttribute('cursor-listener', '');
-        document.querySelector('a-scene').appendChild(danger);
-      }
+function clearHover(el){
+  const to = state.timers.get(el);
+  if(to){ clearTimeout(to); state.timers.delete(el); }
+  if(el && (el.classList.contains('ui') || el.classList.contains('control'))) el.object3D.scale.set(1,1,1);
+}
+
+/* ---------- particles ---------- */
+function particleBurst(pos){
+  for(let i=0;i<10;i++){
+    const p = document.createElement('a-sphere');
+    p.setAttribute('radius','0.04'); p.setAttribute('color','#fff');
+    p.object3D.position.set(pos.x,pos.y,pos.z);
+    document.querySelector('a-scene').appendChild(p);
+    const dx = pos.x + (Math.random()-0.5)*0.6;
+    const dy = pos.y + Math.random()*0.8;
+    const dz = pos.z + (Math.random()-0.5)*0.6;
+    p.setAttribute('animation__m', `property: position; to: ${dx} ${dy} ${dz}; dur: 520; easing: easeOutQuad`);
+    p.setAttribute('animation__f', `property: material.opacity; to:0; dur:520; delay:180`);
+    setTimeout(()=>{ p.parentNode && p.parentNode.removeChild(p); }, 720);
+  }
+}
+
+/* ---------- Start/stop game flow ---------- */
+function startGame(){
+  // hide menu panel
+  menuPanel.setAttribute('visible','false');
+  // apply chosen gaze ms to state (orb/danger already set via UI)
+  // show HUD
+  hud.classList.remove('vis-hidden');
+  // set running
+  state.running = true;
+  // spawn objects
+  startStaggeredSpawns();
+  // start round timer
+  startRound();
+  showToast('Game started');
+}
+
+function triggerGameOver(msg){
+  state.running = false;
+  state.paused = true;
+  // show 3D game over panel in front of player
+  const cam = document.getElementById('camera').object3D;
+  const pos = new THREE.Vector3(); cam.getWorldPosition(pos);
+  const dir = new THREE.Vector3(); cam.getWorldDirection(dir);
+  dir.multiplyScalar(1.0); pos.add(dir);
+  const panel = document.getElementById('gameOverPanel');
+  panel.object3D.position.copy(pos);
+  panel.object3D.lookAt(cam.getWorldPosition(new THREE.Vector3()));
+  panel.setAttribute('visible','true');
+  document.getElementById('gameOverText').setAttribute('value', msg);
+  hud.classList.add('vis-hidden');
+  showToast('Game Over');
+}
+
+/* ---------- Round timer ---------- */
+function startRound(){
+  clearInterval(state.roundTimer);
+  state.roundTime = 60;
+  document.getElementById('timeVal') && (document.getElementById('timeVal').textContent = state.roundTime);
+  state.roundTimer = setInterval(()=>{
+    if(!state.running || state.paused) return;
+    state.roundTime -= 1;
+    document.getElementById('timeVal') && (document.getElementById('timeVal').textContent = state.roundTime);
+    if(state.roundTime <= 0){
+      clearInterval(state.roundTimer);
+      triggerGameOver(\"Time's up\");
     }
+  }, 1000);
+}
 
-    AFRAME.registerComponent('cursor-listener', {
-      init: function () {
-        this.el.addEventListener('click', (e) => {
-          if (this.el.classList.contains('orb')) {
-            this.el.parentNode.removeChild(this.el);
-            score += 10;
-            orbsCollected++;
-            document.getElementById('scoreUI').innerText = 'Score: ' + score;
-            if (orbsCollected === totalOrbs) {
-              endGame();
-            }
-          } else if (this.el.classList.contains('danger')) {
-            endGame();
-          }
-        });
-      }
-    });
+/* ---------- Bind restart (clicking 3D Game Over will reload) ---------- */
+document.getElementById('gameOverPanel').addEventListener('click', ()=> location.reload());
 
-    function endGame() {
-      vrScene.style.display = 'none';
-      scoreUI.style.display = 'none';
-      gameOverUI.style.display = 'flex';
-    }
+/* ---------- Initial binding for UI elements (already set) ---------- */
+/* Values already wired with uiBind which uses 'click' and 'mouseenter' handlers above */
 
-    restartBtn.addEventListener('click', () => {
-      location.reload();
-    });
-  </script>
+/* ---------- Make sure menu visible at start ---------- */
+menuPanel.setAttribute('visible','true');
+placeMenuInFront(1.2, 0, 0.12);
+
+</script>
 </body>
-    </html>
+        </html>
