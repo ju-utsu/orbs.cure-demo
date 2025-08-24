@@ -1,174 +1,140 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>VR Gaze Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <style>
-    .hud {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      color: white;
-      font-family: Arial, sans-serif;
-      font-size: 18px;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 8px 14px;
-      border-radius: 8px;
-      z-index: 1000;
-    }
-
-    .menu {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      width: 280px;
-      z-index: 2000;
-    }
-
-    .menu input {
-      width: 60px;
-      text-align: center;
-      margin: 10px;
-      font-size: 18px;
-    }
-
-    .menu button {
-      background: #00aaff;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      margin-top: 10px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .menu button:hover {
-      background: #0088cc;
-    }
-  </style>
-</head>
-<body>
-  <!-- HUD -->
-  <div class="hud">
-    Score: <span id="score">0</span>
-    <br>
-    <button onclick="openMenu()">⚙ Settings</button>
-  </div>
-
-  <!-- Menu -->
-  <div class="menu" id="settingsMenu">
-    <h2>Game Settings</h2>
-    <p>Gaze Timer (sec): <input type="number" id="gazeTimeInput" min="1" max="10" value="2"></p>
-    <button onclick="closeMenu()">Close</button>
-  </div>
-
-  <!-- A-Frame Scene -->
-  <a-scene>
-    <!-- Background Grid -->
-    <a-sky color="#000"></a-sky>
-    <a-entity geometry="primitive: plane; width: 100; height: 100"
-              rotation="-90 0 0"
-              material="shader: standard; color: #111; wireframe: true; metalness: 0.5; roughness: 0.2;">
-    </a-entity>
-
-    <!-- Player -->
-    <a-entity id="cameraRig">
-      <a-camera id="camera" look-controls>
-        <a-entity cursor="fuse: true; fuseTimeout: 2000"
-                  position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                  material="color: cyan; shader: flat">
-        </a-entity>
-      </a-camera>
-    </a-entity>
-
-    <!-- Orbs & Danger Objects Container -->
-    <a-entity id="objects"></a-entity>
-  </a-scene>
-
-  <script>
-    let score = 0;
-    let gazeTime = 2000; // default 2 seconds
-    const scoreDisplay = document.getElementById('score');
-    const menu = document.getElementById('settingsMenu');
-
-    function openMenu() {
-      menu.style.display = 'block';
-    }
-
-    function closeMenu() {
-      menu.style.display = 'none';
-      gazeTime = document.getElementById('gazeTimeInput').value * 1000;
-    }
-
-    function spawnObjects() {
-      const container = document.getElementById('objects');
-      container.innerHTML = ''; // clear old objects
-      for (let i = 0; i < 20; i++) {
-        const orb = document.createElement('a-sphere');
-        orb.setAttribute('position', randomPosition());
-        orb.setAttribute('radius', '0.3');
-        orb.setAttribute('color', '#00ffcc');
-        orb.classList.add('collectible');
-        container.appendChild(orb);
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Neon Grid VR Game</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
       }
-
-      for (let i = 0; i < 10; i++) {
-        const danger = document.createElement('a-box');
-        danger.setAttribute('position', randomPosition());
-        danger.setAttribute('depth', '0.4');
-        danger.setAttribute('height', '0.4');
-        danger.setAttribute('width', '0.4');
-        danger.setAttribute('color', '#ff0044');
-        danger.classList.add('danger');
-        container.appendChild(danger);
+      #hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        font-size: 24px;
+        color: cyan;
+        font-family: Arial, sans-serif;
+        text-shadow: 0 0 8px cyan;
+        z-index: 999;
       }
-    }
+    </style>
+  </head>
+  <body>
+    <div id="hud">Score: 0</div>
 
-    function randomPosition() {
-      const x = (Math.random() * 20 - 10).toFixed(2);
-      const y = (Math.random() * 3 + 1).toFixed(2);
-      const z = (Math.random() * -20).toFixed(2);
-      return `${x} ${y} ${z}`;
-    }
+    <a-scene background="color: #000" vr-mode-ui="enabled: true">
+      <!-- Camera with Gaze Cursor -->
+      <a-entity id="cameraRig" position="0 1.6 0">
+        <a-camera>
+          <a-cursor
+            id="gazeCursor"
+            fuse="true"
+            fuse-timeout="150"
+            material="color: cyan; shader: flat"
+            geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+          ></a-cursor>
+        </a-camera>
+      </a-entity>
 
-    // Gaze Interaction
-    AFRAME.registerComponent('gaze-listener', {
-      init: function () {
-        this.el.addEventListener('mouseenter', () => {
-          this.timeout = setTimeout(() => {
-            if (this.el.classList.contains('collectible')) {
-              score++;
-              scoreDisplay.textContent = score;
-              this.el.parentNode.removeChild(this.el);
-            } else if (this.el.classList.contains('danger')) {
-              alert('Game Over! You looked at a danger object.');
-              location.reload();
+      <!-- Neon Grid Floor -->
+      <a-plane
+        position="0 0 -5"
+        rotation="-90 0 0"
+        width="100"
+        height="100"
+        material="color: #111; shader: flat; side: double"
+      ></a-plane>
+
+      <!-- Tron-Style Grid Lines -->
+      <a-entity neon-grid></a-entity>
+
+      <!-- Orbs & Dangers will spawn here -->
+      <a-entity id="gameObjects"></a-entity>
+
+      <!-- Sky for aesthetic -->
+      <a-sky color="#000"></a-sky>
+    </a-scene>
+
+    <script>
+      let score = 0;
+      const hud = document.getElementById("hud");
+      const gameObjectsContainer = document.getElementById("gameObjects");
+
+      // Component for neon grid
+      AFRAME.registerComponent("neon-grid", {
+        init: function () {
+          const grid = document.createElement("a-entity");
+          for (let x = -50; x <= 50; x += 5) {
+            for (let z = -50; z <= 50; z += 5) {
+              const line = document.createElement("a-plane");
+              line.setAttribute("width", "0.1");
+              line.setAttribute("height", "5");
+              line.setAttribute("color", "#0ff");
+              line.setAttribute("opacity", "0.4");
+              line.setAttribute("rotation", "-90 0 0");
+              line.setAttribute("position", `${x} 0.01 ${z}`);
+              grid.appendChild(line);
             }
-          }, gazeTime);
-        });
+          }
+          this.el.appendChild(grid);
+        },
+      });
 
-        this.el.addEventListener('mouseleave', () => {
-          clearTimeout(this.timeout);
-        });
+      // Spawn Orbs and Danger Objects
+      function spawnObjects() {
+        for (let i = 0; i < 20; i++) {
+          const orb = document.createElement("a-sphere");
+          orb.setAttribute("color", "#0ff");
+          orb.setAttribute("radius", "0.25");
+          orb.setAttribute("position", randomPosition());
+          orb.setAttribute("gaze-collect", "");
+          orb.setAttribute("animation", "property: rotation; to: 0 360 0; loop: true; dur: 3000");
+          gameObjectsContainer.appendChild(orb);
+        }
+
+        for (let i = 0; i < 10; i++) {
+          const danger = document.createElement("a-box");
+          danger.setAttribute("color", "red");
+          danger.setAttribute("depth", "0.5");
+          danger.setAttribute("height", "0.5");
+          danger.setAttribute("width", "0.5");
+          danger.setAttribute("position", randomPosition());
+          danger.setAttribute("gaze-danger", "");
+          danger.setAttribute("animation", "property: rotation; to: 0 360 0; loop: true; dur: 4000");
+          gameObjectsContainer.appendChild(danger);
+        }
       }
-    });
 
-    setTimeout(() => {
-      const objects = document.querySelectorAll('.collectible, .danger');
-      objects.forEach(obj => obj.setAttribute('gaze-listener', ''));
-    }, 1000);
+      function randomPosition() {
+        const x = (Math.random() - 0.5) * 20;
+        const y = Math.random() * 3 + 0.5;
+        const z = (Math.random() - 0.5) * -20 - 3;
+        return `${x} ${y} ${z}`;
+      }
 
-    spawnObjects();
-  </script>
-</body>
+      AFRAME.registerComponent("gaze-collect", {
+        init: function () {
+          this.el.addEventListener("click", () => {
+            this.el.parentNode.removeChild(this.el);
+            score += 10;
+            hud.textContent = "Score: " + score;
+          });
+        },
+      });
+
+      AFRAME.registerComponent("gaze-danger", {
+        init: function () {
+          this.el.addEventListener("click", () => {
+            alert("Game Over! Final Score: " + score);
+            location.reload();
+          });
+        },
+      });
+
+      spawnObjects();
+    </script>
+  </body>
 </html>
