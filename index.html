@@ -1,201 +1,152 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>VR Orb Collector</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <meta charset="utf-8">
+    <title>Neon Grid VR Game</title>
+    <meta name="description" content="VR Gaze Game with Neon Grid">
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #0d0d0d;
-        color: white;
-        text-align: center;
-      }
-
+      body { margin: 0; font-family: Arial, sans-serif; background: #000; color: #fff; }
       #mainMenu {
         position: absolute;
-        width: 100%;
-        height: 100%;
-        background: rgba(13, 13, 13, 0.95);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        z-index: 999;
       }
-
-      #mainMenu h1 {
-        font-size: 2.5em;
-        margin-bottom: 20px;
-        color: #00ffff;
-      }
-
-      #mainMenu label {
-        display: block;
-        margin-top: 15px;
-      }
-
-      #mainMenu input {
-        margin-top: 5px;
-        padding: 8px;
-        border-radius: 6px;
-        border: none;
-        text-align: center;
-      }
-
+      .menu-item { margin: 10px; }
+      .menu-item label { font-size: 1.2em; margin-right: 10px; }
       #startBtn {
-        margin-top: 25px;
-        padding: 12px 20px;
-        font-size: 18px;
-        background: #00ffff;
-        color: black;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
+        background: #00f0ff; color: #000;
+        border: none; padding: 15px 40px;
+        font-size: 1.4em; font-weight: bold;
+        border-radius: 10px; cursor: pointer;
+        margin-top: 20px;
       }
-
-      #startBtn:hover {
-        background: #00cccc;
-      }
-
       #hud {
         position: absolute;
-        top: 20px;
-        left: 20px;
-        font-size: 18px;
-        color: white;
-        background: rgba(0, 0, 0, 0.4);
-        padding: 8px 15px;
-        border-radius: 10px;
-        display: none;
-      }
-
-      a-scene {
-        display: none;
+        top: 10px; left: 10px;
+        font-size: 20px; color: #0ff;
+        text-shadow: 0 0 10px #0ff;
       }
     </style>
   </head>
   <body>
     <!-- Main Menu -->
     <div id="mainMenu">
-      <h1>VR Orb Collector</h1>
-      <label>
-        Gaze Timer (ms):
-        <input type="number" id="gazeTime" value="1500" min="500" />
-      </label>
-      <label>
-        Number of Orbs:
-        <input type="number" id="numOrbs" value="15" min="5" />
-      </label>
-      <label>
-        Number of Dangers:
-        <input type="number" id="numDangers" value="8" min="1" />
-      </label>
+      <h1>Neon Grid VR Game</h1>
+      <div class="menu-item">
+        <label for="gazeTimer">Gaze Timer (ms):</label>
+        <input type="number" id="gazeTimer" value="2000" />
+      </div>
+      <div class="menu-item">
+        <label for="orbCount">Orbs:</label>
+        <input type="number" id="orbCount" value="10" />
+      </div>
+      <div class="menu-item">
+        <label for="dangerCount">Dangers:</label>
+        <input type="number" id="dangerCount" value="3" />
+      </div>
       <button id="startBtn">Start Game</button>
     </div>
 
     <!-- HUD -->
-    <div id="hud">Score: 0</div>
+    <div id="hud" style="display: none;">Score: 0</div>
 
     <!-- VR Scene -->
-    <a-scene>
-      <a-assets>
-        <audio id="collect-sound" src="https://cdn.freesound.org/previews/341/341695_5858296-lq.mp3"></audio>
-      </a-assets>
-
-      <!-- Camera -->
-      <a-entity id="camera" camera look-controls>
-        <a-entity cursor="fuse: true; fuseTimeout: 1500" position="0 0 -1"
-          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-          material="color: cyan; shader: flat">
-        </a-entity>
+    <a-scene id="vrScene" vr-mode-ui="enabled: true" embedded style="display:none;">
+      <!-- Camera + Cursor -->
+      <a-entity id="cameraRig">
+        <a-camera>
+          <a-cursor
+            id="gazeCursor"
+            fuse="true"
+            fuse-timeout="2000"
+            color="#0ff">
+          </a-cursor>
+        </a-camera>
       </a-entity>
 
-      <!-- Ground Grid -->
-      <a-entity geometry="primitive: plane; width: 100; height: 100"
-                material="color: #0d0d0d; shader: flat; wireframe: true; opacity: 0.2"
-                rotation="-90 0 0">
+      <!-- Neon Grid Floor -->
+      <a-entity id="grid" geometry="primitive: plane; width: 100; height: 100"
+                rotation="-90 0 0"
+                material="shader: standard; color: #111; metalness: 0.8; roughness: 0.1; wireframe: true; emissive: #0ff; emissiveIntensity: 0.8">
       </a-entity>
 
-      <!-- Lighting -->
-      <a-entity light="type: ambient; intensity: 0.6"></a-entity>
-      <a-entity light="type: directional; intensity: 0.8" position="2 4 -2"></a-entity>
+      <!-- Ambient Effects -->
+      <a-sky color="#000"></a-sky>
+      <a-entity light="type: ambient; color: #00ffff; intensity: 0.5"></a-entity>
+      <a-entity light="type: point; intensity: 0.8; color: #0ff; distance: 50" position="0 10 0"></a-entity>
+      <a-entity particle-system="preset: dust; color: #0ff; particleCount: 1000"></a-entity>
+
+      <!-- Spawners -->
+      <a-entity id="orbSpawner"></a-entity>
+      <a-entity id="dangerSpawner"></a-entity>
     </a-scene>
 
     <script>
-      const startBtn = document.getElementById("startBtn");
-      const mainMenu = document.getElementById("mainMenu");
-      const hud = document.getElementById("hud");
-      const scene = document.querySelector("a-scene");
-      const collectSound = document.querySelector("#collect-sound");
-      const cursor = document.querySelector("[cursor]");
+      const startBtn = document.getElementById('startBtn');
+      const mainMenu = document.getElementById('mainMenu');
+      const vrScene = document.getElementById('vrScene');
+      const hud = document.getElementById('hud');
+      const gazeCursor = document.getElementById('gazeCursor');
 
       let score = 0;
-      let gazeTimeValue = 1500;
 
-      startBtn.addEventListener("click", () => {
-        gazeTimeValue = parseInt(document.getElementById("gazeTime").value);
-        const numOrbs = parseInt(document.getElementById("numOrbs").value);
-        const numDangers = parseInt(document.getElementById("numDangers").value);
+      startBtn.addEventListener('click', () => {
+        const gazeTime = parseInt(document.getElementById('gazeTimer').value);
+        const orbCount = parseInt(document.getElementById('orbCount').value);
+        const dangerCount = parseInt(document.getElementById('dangerCount').value);
 
-        cursor.setAttribute("cursor", `fuse: true; fuseTimeout: ${gazeTimeValue}`);
+        gazeCursor.setAttribute('fuse-timeout', gazeTime);
 
-        mainMenu.style.display = "none";
-        scene.style.display = "block";
-        hud.style.display = "block";
+        mainMenu.style.display = 'none';
+        vrScene.style.display = 'block';
+        hud.style.display = 'block';
 
-        spawnObjects(numOrbs, numDangers);
+        spawnObjects('orb', orbCount);
+        spawnObjects('danger', dangerCount);
       });
 
-      function spawnObjects(orbsCount, dangersCount) {
-        for (let i = 0; i < orbsCount; i++) {
-          const orb = document.createElement("a-sphere");
-          orb.setAttribute("radius", "0.3");
-          orb.setAttribute("color", "#00ffff");
-          orb.setAttribute("position", randomPosition());
-          orb.setAttribute("class", "collectible");
-          scene.appendChild(orb);
+      function spawnObjects(type, count) {
+        const spawner = document.getElementById(type + 'Spawner');
+        for (let i = 0; i < count; i++) {
+          const entity = document.createElement('a-entity');
+          const x = (Math.random() - 0.5) * 20;
+          const y = 1 + Math.random() * 2;
+          const z = (Math.random() - 0.5) * 20;
+          entity.setAttribute('position', `${x} ${y} ${z}`);
+
+          if (type === 'orb') {
+            entity.setAttribute('geometry', 'primitive: sphere; radius: 0.5');
+            entity.setAttribute('material', 'color: #0ff; emissive: #0ff; emissiveIntensity: 0.7');
+          } else {
+            entity.setAttribute('geometry', 'primitive: box; depth: 0.8; height: 0.8; width: 0.8');
+            entity.setAttribute('material', 'color: #f00; emissive: #f00; emissiveIntensity: 0.7');
+          }
+
+          entity.classList.add(type);
+          entity.setAttribute('gaze-listener', '');
+          spawner.appendChild(entity);
         }
+      }
 
-        for (let i = 0; i < dangersCount; i++) {
-          const danger = document.createElement("a-box");
-          danger.setAttribute("depth", "0.5");
-          danger.setAttribute("height", "0.5");
-          danger.setAttribute("width", "0.5");
-          danger.setAttribute("color", "red");
-          danger.setAttribute("position", randomPosition());
-          danger.setAttribute("class", "danger");
-          scene.appendChild(danger);
+      AFRAME.registerComponent('gaze-listener', {
+        init: function () {
+          this.el.addEventListener('click', () => {
+            if (this.el.classList.contains('orb')) {
+              score += 10;
+              hud.textContent = `Score: ${score}`;
+            } else if (this.el.classList.contains('danger')) {
+              score -= 5;
+              hud.textContent = `Score: ${score}`;
+            }
+            this.el.parentNode.removeChild(this.el);
+          });
         }
-
-        addInteractions();
-      }
-
-      function randomPosition() {
-        const x = (Math.random() - 0.5) * 10;
-        const y = Math.random() * 2 + 0.5;
-        const z = (Math.random() - 0.5) * -10;
-        return `${x} ${y} ${z}`;
-      }
-
-      function addInteractions() {
-        document.querySelectorAll(".collectible").forEach((orb) => {
-          orb.addEventListener("click", () => {
-            orb.parentNode.removeChild(orb);
-            score += 10;
-            hud.innerText = `Score: ${score}`;
-            collectSound.play();
-          });
-        });
-
-        document.querySelectorAll(".danger").forEach((danger) => {
-          danger.addEventListener("click", () => {
-            danger.parentNode.removeChild(danger);
-            score -= 5;
-            hud.innerText = `Score: ${score}`;
-          });
-        });
-      }
+      });
     </script>
   </body>
 </html>
