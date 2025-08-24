@@ -73,13 +73,34 @@
     let gazeTime = 1500; // default dwell time
     const scoreEl = document.getElementById('score');
 
-    // Spawn orbs
-    for (let i = 0; i < 10; i++) {
-      spawnOrb();
+    // Staggered spawning to avoid performance spike
+    const TOTAL_ORBS = 20;
+    const TOTAL_DANGER = 10;
+    let spawnedOrbs = 0;
+    let spawnedDanger = 0;
+    let orbInterval = null;
+    let dangerInterval = null;
+
+    function startStaggeredSpawns(){
+      // clear any previous intervals
+      if(orbInterval) clearInterval(orbInterval);
+      if(dangerInterval) clearInterval(dangerInterval);
+      spawnedOrbs = 0; spawnedDanger = 0;
+      // spawn one orb every 200ms (5 per second)
+      orbInterval = setInterval(()=>{
+        if(spawnedOrbs < TOTAL_ORBS){ spawnOrb(); spawnedOrbs++; }
+        else clearInterval(orbInterval);
+      }, 200);
+      // spawn one danger every 600ms
+      dangerInterval = setInterval(()=>{
+        if(spawnedDanger < TOTAL_DANGER){ spawnDanger(); spawnedDanger++; }
+        else clearInterval(dangerInterval);
+      }, 600);
     }
-    // Spawn danger cubes
-    for (let i = 0; i < 5; i++) {
-      spawnDanger();
+
+    // begin staggered spawn
+    startStaggeredSpawns();
+    }
     }
 
     function spawnOrb() {
