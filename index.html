@@ -1,209 +1,206 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Orb Collector VR</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-      }
-
-      #hud {
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        color: white;
-        font-size: 20px;
-        z-index: 10;
-      }
-
-      #menuButton {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: #333;
-        color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 24px;
-        cursor: pointer;
-        z-index: 20;
-      }
-
-      #menu {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
-        display: none;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 30;
-      }
-
-      #menu button {
-        margin: 10px;
-        padding: 12px 24px;
-        font-size: 18px;
-        background: #444;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-      }
-
-      #menu button:hover {
-        background: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- HUD -->
-    <div id="hud">Score: 0 | Time: 0s</div>
-
-    <!-- Floating Menu Button -->
-    <div id="menuButton">☰</div>
-
-    <!-- Pause Menu -->
-    <div id="menu">
-      <h1>Game Paused</h1>
-      <button id="resumeBtn">Resume</button>
-      <button id="restartBtn">Restart</button>
+<!DOCTYPE html><html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>VR Orb Collector — Polished</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    html,body{height:100%;margin:0;background:#0a0f1a;color:#fff;font-family:system-ui}
+    /* Small, clean HUD */
+    #hud{position:fixed;left:10px;top:10px;z-index:9999;font-size:13px;background:rgba(0,0,0,.45);padding:8px 10px;border-radius:8px;backdrop-filter:blur(4px);box-shadow:0 2px 10px rgba(0,0,0,.25)}
+    #hud b{color:#7bdcff}
+    /* Center overlay menu */
+    #menuOverlay{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:10000;background:rgba(10,14,22,.96);padding:18px 16px;border-radius:12px;width:320px;box-shadow:0 20px 50px rgba(0,0,0,.55)}
+    #menuOverlay h3{margin:0 0 10px 0;font-size:18px}
+    #menuOverlay label{display:block;font-size:12px;margin-top:8px;opacity:.9}
+    #menuOverlay input{width:100%;padding:8px;margin-top:4px;border-radius:8px;border:1px solid #2a3a4d;background:#0f1520;color:#e6f5ff}
+    #menuOverlay .row{display:flex;gap:8px;margin-top:12px}
+    #menuOverlay button{flex:1;padding:10px;border-radius:8px;border:none;background:#1f9cff;color:#fff;font-weight:600;cursor:pointer}
+    #menuOverlay button.secondary{background:#26384d}
+    /* Subtle toast */
+    #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 12px;border-radius:10px;display:none;z-index:9998;font-size:13px}
+  </style>
+</head>
+<body>
+  <div id="hud">Score: <b id="scoreVal">0</b> &nbsp;|&nbsp; Time: <b id="timeVal">60</b>s</div>
+  <div id="toast"></div>  <!-- Settings overlay (opens via 3D gear OR top-right button) -->  <div id="menuOverlay" role="dialog" aria-hidden="true">
+    <h3>Game Settings</h3>
+    <label>Orb gaze time (ms)</label>
+    <input id="orbGazeInput" type="number" min="50" step="50" value="150">
+    <label>Danger gaze time (ms)</label>
+    <input id="dangerGazeInput" type="number" min="100" step="50" value="500">
+    <div class="row">
+      <button id="saveSettings">Save & Close</button>
+      <button id="restartBtn" class="secondary">Restart</button>
     </div>
+  </div>  <a-scene renderer="antialias:true" background="color:#0a0f1a" fog="type: exponential; color: #0a0f1a; density: 0.02">
+    <a-assets>
+      <!-- simple ping sounds -->
+      <audio id="sCollect" src="https://cdn.aframe.io/basic-guide/audio/click.ogg"></audio>
+      <audio id="sDanger" src="https://cdn.aframe.io/basic-guide/audio/explosion.ogg"></audio>
+    </a-assets><!-- Lights -->
+<a-entity light="type: ambient; intensity: 0.7"></a-entity>
+<a-entity light="type: directional; intensity: 0.8" position="1 3 2"></a-entity>
 
-    <!-- A-Frame Scene -->
-    <a-scene>
-      <!-- Camera with cursor -->
-      <a-entity
-        id="camera"
-        camera
-        position="0 1.6 0"
-        look-controls
-        wasd-controls
-      >
-        <a-entity
-          cursor="fuse: true; fuseTimeout: 1500"
-          position="0 0 -1"
-          geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-          material="color: white; shader: flat"
-        ></a-entity>
-      </a-entity>
+<!-- Sky + ground grid -->
+<a-sky color="#0b1730"></a-sky>
+<a-plane rotation="-90 0 0" width="200" height="200" material="color:#0a1122; metalness:0; roughness:1; src:https://i.imgur.com/0Z8Fq5Z.png; repeat:60 60; transparent:true; opacity:0.25"></a-plane>
 
-      <!-- VR Button -->
-      <a-entity id="vrButton" position="0 2 -2" text="value: Enter VR; color: white; align: center"></a-entity>
+<!-- Camera rig + reticle + raycaster -->
+<a-entity id="rig" position="0 1.6 0">
+  <a-entity id="camera" camera look-controls>
+    <a-ring id="reticle" position="0 0 -0.95" radius-inner="0.01" radius-outer="0.02" material="color:#ffffff"></a-ring>
+    <a-entity id="ray" raycaster="objects: .interactable; interval: 50" position="0 0 0"></a-entity>
+  </a-entity>
+</a-entity>
 
-      <!-- Aesthetic Grid Environment -->
-      <a-plane
-        rotation="-90 0 0"
-        width="30"
-        height="30"
-        color="#222"
-        material="shader: standard; wireframe: true"
-      ></a-plane>
+<!-- 3D Gear (built from primitives so no external model) -->
+<a-entity id="gearNode" class="interactable ui" position="0.5 0.2 -1" scale="0.15 0.15 0.15">
+  <a-torus radius="0.45" radius-tubular="0.12" material="color:#1f9cff; metalness:0.4; roughness:0.2" animation="property: rotation; to: 0 360 0; loop:true; dur:12000; easing:linear"></a-torus>
+  <a-entity id="gearTeeth"></a-entity>
+</a-entity>
 
-      <!-- Lighting -->
-      <a-entity light="type: ambient; color: #fff; intensity: 0.5"></a-entity>
-      <a-entity light="type: point; intensity: 1" position="0 5 0"></a-entity>
-    </a-scene>
+<!-- Containers for dynamic objects -->
+<a-entity id="collect-spawner"></a-entity>
+<a-entity id="danger-spawner"></a-entity>
 
-    <script>
-      const hud = document.getElementById("hud");
-      const menu = document.getElementById("menu");
-      const menuButton = document.getElementById("menuButton");
-      const resumeBtn = document.getElementById("resumeBtn");
-      const restartBtn = document.getElementById("restartBtn");
-      const scene = document.querySelector("a-scene");
+<!-- Game over panel -->
+<a-entity id="gameOverPanel" visible="false">
+  <a-entity position="0 1.4 -1.2">
+    <a-plane width="1.0" height="0.5" color="#2a0c0c" material="opacity:0.95"></a-plane>
+    <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01"></a-text>
+  </a-entity>
+</a-entity>
 
-      let score = 0;
-      let time = 0;
-      let gamePaused = false;
-      let gameOver = false;
+  </a-scene>  <script>
+    // ----------- State & helpers -----------
+    const state = {
+      running: true,
+      paused: false,
+      score: 0,
+      orbGazeMs: 150,
+      dangerGazeMs: 500,
+      TOTAL_ORBS: 20,
+      TOTAL_DANGER: 10,
+      roundTime: 60,
+      timers: new Map(),
+      orbInterval: null,
+      dangerInterval: null,
+      spawnedOrbs: 0,
+      spawnedDanger: 0
+    };
 
-      // Update HUD
-      function updateHUD() {
-        hud.innerText = `Score: ${score} | Time: ${time}s`;
-      }
+    const scoreVal = document.getElementById('scoreVal');
+    const timeVal = document.getElementById('timeVal');
+    const toast = document.getElementById('toast');
+    const overlay = document.getElementById('menuOverlay');
+    const orbInput = document.getElementById('orbGazeInput');
+    const dangerInput = document.getElementById('dangerGazeInput');
+    const saveBtn = document.getElementById('saveSettings');
+    const restartBtn = document.getElementById('restartBtn');
 
-      // Timer
-      setInterval(() => {
-        if (!gamePaused && !gameOver) {
-          time++;
-          updateHUD();
+    function showToast(msg, ms=1200){ toast.textContent = msg; toast.style.display='block'; clearTimeout(toast._t); toast._t = setTimeout(()=> toast.style.display='none', ms); }
+    function setScore(v){ state.score = v; scoreVal.textContent = v; }
+
+    // ----------- Gear visual teeth (procedural) -----------
+    // Build 12 small boxes around torus to hint 'gear' without external GLTF
+    const teethParent = document.getElementById('gearTeeth');
+    for(let i=0;i<12;i++){
+      const t = document.createElement('a-box');
+      t.setAttribute('width','0.18'); t.setAttribute('height','0.12'); t.setAttribute('depth','0.12');
+      t.setAttribute('material','color:#9bd3ff; metalness:0.2; roughness:0.3');
+      const angle = (i/12)*Math.PI*2;
+      const r = 0.58; const x = Math.cos(angle)*r; const y = Math.sin(angle)*r;
+      t.setAttribute('position', `${x} ${y} 0`);
+      t.setAttribute('rotation', `0 0 ${angle*180/Math.PI}`);
+      teethParent.appendChild(t);
+    }
+
+    // ----------- Spawners -----------
+    const collectSpawner = document.getElementById('collect-spawner');
+    const dangerSpawner = document.getElementById('danger-spawner');
+
+    function randPos(){ const x=(Math.random()*10)-5; const y=0.9+Math.random()*1.6; const z=-(2+Math.random()*8); return {x,y,z}; }
+
+    function spawnOrb(){ if(!state.running) return; const p=randPos(); const e=document.createElement('a-sphere'); e.classList.add('interactable'); e.dataset.gaze='collect'; e.setAttribute('radius','0.28'); e.setAttribute('color','#ffd84d'); e.setAttribute('emissive','#7d5'); e.setAttribute('position', `${p.x} ${p.y} ${p.z}`); e.setAttribute('animation__float', `property: position; dir: alternate; dur: ${2000+Math.floor(Math.random()*1200)}; to: ${p.x} ${p.y+0.25} ${p.z}; loop:true; easing: easeInOutSine`); collectSpawner.appendChild(e); }
+
+    function spawnDanger(){ if(!state.running) return; const p=randPos(); const e=document.createElement('a-octahedron'); e.classList.add('interactable'); e.dataset.gaze='danger'; e.setAttribute('radius','0.35'); e.setAttribute('color','#ff4d6d'); e.setAttribute('position', `${p.x} ${Math.max(0.5,p.y-0.6)} ${p.z}`); e.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 5000; loop:true; easing:linear'); dangerSpawner.appendChild(e); }
+
+    function startStaggeredSpawns(){
+      clearInterval(state.orbInterval); clearInterval(state.dangerInterval);
+      state.spawnedOrbs=0; state.spawnedDanger=0;
+      state.orbInterval = setInterval(()=>{ if(state.spawnedOrbs<state.TOTAL_ORBS){ spawnOrb(); state.spawnedOrbs++; } else clearInterval(state.orbInterval); }, 150);
+      state.dangerInterval = setInterval(()=>{ if(state.spawnedDanger<state.TOTAL_DANGER){ spawnDanger(); state.spawnedDanger++; } else clearInterval(state.dangerInterval); }, 450);
+    }
+
+    startStaggeredSpawns();
+
+    // ----------- Gaze dwell logic (independent of cursor fuse) -----------
+    const ray = document.getElementById('ray');
+    const reticle = document.getElementById('reticle');
+    const gearNode = document.getElementById('gearNode');
+    let hovered=null;
+
+    ray.addEventListener('raycaster-intersection', (e)=>{
+      const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i=>i.object.el));
+      const el = els && els.length ? els[0] : null;
+      if(el && el!==hovered){ if(hovered) clearHover(hovered); startHover(el); hovered=el; }
+    });
+    ray.addEventListener('raycaster-intersection-cleared', ()=>{ if(hovered) clearHover(hovered); hovered=null; reticle.setAttribute('color','#ffffff'); reticle.setAttribute('scale','1 1 1'); });
+
+    function startHover(el){
+      const kind = el.dataset && el.dataset.gaze ? el.dataset.gaze : (el.classList.contains('ui')? 'ui' : null);
+      if(!kind) return;
+      if(kind==='collect') reticle.setAttribute('color','#ffd84d');
+      else if(kind==='danger') reticle.setAttribute('color','#ff4d6d');
+      else reticle.setAttribute('color','#1f9cff');
+      reticle.setAttribute('scale','1.6 1.6 1');
+
+      if(kind==='ui'){ gearNode.setAttribute('animation__spin','property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear'); gearNode.setAttribute('scale','0.18 0.18 0.18'); }
+
+      if(!state.running || state.paused) return;
+      const ms = kind==='collect' ? state.orbGazeMs : (kind==='danger' ? state.dangerGazeMs : 220);
+      const to = setTimeout(()=>{
+        if(!state.running || state.paused) return;
+        if(kind==='collect'){
+          document.getElementById('sCollect').play().catch(()=>{});
+          particle(el.object3D.position);
+          el.remove();
+          setScore(state.score+1);
+        } else if(kind==='danger'){
+          document.getElementById('sDanger').play().catch(()=>{});
+          gameOver('Gazed at danger');
+        } else if(kind==='ui'){
+          openMenu();
         }
-      }, 1000);
+      }, ms);
+      state.timers.set(el, to);
+    }
 
-      // Pause menu toggle
-      menuButton.addEventListener("click", () => {
-        gamePaused = true;
-        menu.style.display = "flex";
-      });
+    function clearHover(el){ const to=state.timers.get(el); if(to){ clearTimeout(to); state.timers.delete(el);} if(el===gearNode){ gearNode.setAttribute('animation__spin','property: rotation; to: 0 360 0; dur: 12000; loop:true; easing:linear'); gearNode.setAttribute('scale','0.15 0.15 0.15'); } }
 
-      resumeBtn.addEventListener("click", () => {
-        gamePaused = false;
-        menu.style.display = "none";
-      });
+    function particle(pos){ for(let i=0;i<10;i++){ const p=document.createElement('a-sphere'); p.setAttribute('radius','0.04'); p.setAttribute('color','#fff'); p.object3D.position.set(pos.x,pos.y,pos.z); document.querySelector('a-scene').appendChild(p); const dx=pos.x+(Math.random()-0.5)*0.6; const dy=pos.y+Math.random()*0.8; const dz=pos.z+(Math.random()-0.5)*0.6; p.setAttribute('animation__m', `property: position; to: ${dx} ${dy} ${dz}; dur: 500; easing: easeOutQuad`); p.setAttribute('animation__f', `property: material.opacity; to:0; dur:500; delay:200`); setTimeout(()=>{ p.remove(); },700);} }
 
-      restartBtn.addEventListener("click", () => {
-        window.location.reload();
-      });
+    // ----------- Menu & round management -----------
+    function openMenu(){ state.paused=true; overlay.style.display='block'; overlay.setAttribute('aria-hidden','false'); orbInput.value=state.orbGazeMs; dangerInput.value=state.dangerGazeMs; showToast('Menu opened'); }
+    function closeMenuSave(){ state.paused=false; overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); state.orbGazeMs=parseInt(orbInput.value)||state.orbGazeMs; state.dangerGazeMs=parseInt(dangerInput.value)||state.dangerGazeMs; showToast('Settings saved'); }
 
-      // Spawn Orbs and Dangers
-      function spawnObjects() {
-        if (gamePaused || gameOver) return;
+    document.getElementById('saveSettings').addEventListener('click', closeMenuSave);
+    restartBtn.addEventListener('click', ()=>{ restart(); });
 
-        // Random position around player
-        const x = (Math.random() - 0.5) * 10;
-        const z = (Math.random() - 0.5) * 10;
-        const y = 1.5;
+    function restart(){ state.timers.forEach(t=>clearTimeout(t)); state.timers.clear(); Array.from(collectSpawner.children).forEach(c=>c.remove()); Array.from(dangerSpawner.children).forEach(d=>d.remove()); setScore(0); state.running=true; state.paused=false; document.getElementById('gameOverPanel').setAttribute('visible','false'); startStaggeredSpawns(); startRound(); showToast('Restarted'); }
 
-        // Decide if orb or danger
-        const isOrb = Math.random() > 0.3;
-        const el = document.createElement("a-sphere");
-        el.setAttribute("position", `${x} ${y} ${z}`);
-        el.setAttribute("radius", "0.3");
+    function gameOver(msg){ state.running=false; state.paused=true; const panel=document.getElementById('gameOverPanel'); document.getElementById('gameOverText').setAttribute('value', msg); panel.setAttribute('visible','true'); showToast('Game Over'); }
 
-        if (isOrb) {
-          el.setAttribute("color", "#00f");
-          el.classList.add("orb");
-        } else {
-          el.setAttribute("color", "#f00");
-          el.classList.add("danger");
-        }
+    // Timer
+    let roundTimer=null; function startRound(){ clearInterval(roundTimer); state.roundTime=60; timeVal.textContent=state.roundTime; roundTimer=setInterval(()=>{ if(!state.running||state.paused) return; state.roundTime--; timeVal.textContent=state.roundTime; if(state.roundTime<=0){ clearInterval(roundTimer); gameOver("Time's up"); } },1000);} startRound();
 
-        scene.appendChild(el);
+    // Keep gear attached to camera (world-space offset) so it doesn't orbit the scene
+    const scene = document.querySelector('a-scene');
+    function positionGear(){ const cam=document.getElementById('camera').object3D; if(!cam) return; const pos=new THREE.Vector3(); cam.getWorldPosition(pos); const dir=new THREE.Vector3(); cam.getWorldDirection(dir); const right=new THREE.Vector3(); right.crossVectors(dir,new THREE.Vector3(0,1,0)).normalize(); dir.multiplyScalar(1.0); right.multiplyScalar(0.6); pos.add(dir).add(right); pos.y -= 0.2; document.getElementById('gearNode').object3D.position.copy(pos); }
+    scene.addEventListener('loaded', positionGear);
+    scene.addEventListener('enter-vr', ()=> setTimeout(positionGear,120));
+    setInterval(positionGear, 2500);
 
-        // Add gaze interaction
-        el.addEventListener("mouseenter", () => {
-          if (isOrb) {
-            score++;
-            updateHUD();
-          } else {
-            gameOver = true;
-            alert("Game Over! Final Score: " + score);
-          }
-          el.parentNode.removeChild(el);
-        });
-
-        // Remove after 10s
-        setTimeout(() => {
-          if (el.parentNode) el.parentNode.removeChild(el);
-        }, 10000);
-      }
-
-      setInterval(spawnObjects, 1500);
-
-      updateHUD();
-    </script>
-  </body>
+  </script></body>
 </html>
