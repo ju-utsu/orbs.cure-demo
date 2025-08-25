@@ -33,6 +33,9 @@
       <button id="saveSettings">Save & Close</button>
       <button id="restartBtn">Restart</button>
     </div>
+    <div class="row" style="margin-top:6px;">
+    <button id="startGameBtn">Start Game</button>
+    </div>
   </div>
 
   <a-scene renderer="antialias:true" background="color:#030911">
@@ -78,16 +81,16 @@
       running: true,
       paused: false,
       score: 0,
-      orbGazeMs: 150,
-      dangerGazeMs: 500,
+      orbGazeMs: 15,
+      dangerGazeMs: 5,
       timers: new Map(),
-      TOTAL_ORBS: 20,
-      TOTAL_DANGER: 10,
+      TOTAL_ORBS: 30,
+      TOTAL_DANGER: 45,
       spawnedOrbs: 0,
       spawnedDanger: 0,
       orbInterval: null,
       dangerInterval: null,
-      roundTime: 60,
+      roundTime: 120,
       roundTimer: null
     };
 
@@ -150,8 +153,8 @@
         else clearInterval(state.dangerInterval);
       }, 450);
     } 
-    const MAX_ORBS_ON_SCREEN = 10;
-    const MAX_DANGER_ON_SCREEN = 5;
+    const MAX_ORBS_ON_SCREEN = 30;
+    const MAX_DANGER_ON_SCREEN = 45;
 
     setInterval(()=>{ 
       if(collectSpawner.children.length < MAX_ORBS_ON_SCREEN) spawnOrb();
