@@ -149,7 +149,17 @@
         if(state.spawnedDanger < state.TOTAL_DANGER){ spawnDanger(); state.spawnedDanger++; }
         else clearInterval(state.dangerInterval);
       }, 450);
-    }
+    } 
+    const MAX_ORBS_ON_SCREEN = 10;
+    const MAX_DANGER_ON_SCREEN = 5;
+
+    setInterval(()=>{ 
+      if(collectSpawner.children.length < MAX_ORBS_ON_SCREEN) spawnOrb();
+    }, 800); // tries to spawn an orb every 0.8s
+
+   setInterval(()=>{
+     if(dangerSpawner.children.length < MAX_DANGER_ON_SCREEN) spawnDanger();
+   }, 2000); // tries to spawn danger every 2s
 
     const ray = document.getElementById('ray');
     const reticle = document.getElementById('reticle');
@@ -170,7 +180,8 @@
       reticle.setAttribute('scale','1.6 1.6 1');
 
       if(!state.running || state.paused) return;
-      const ms = kind==='collect' ? state.orbGazeMs : state.dangerGazeMs;
+      const ms = kind==='collect' ? parseInt(orbInput.value) || state.orbGazeMs
+                            : parseInt(dangerInput.value) || state.dangerGazeMs;
       const to = setTimeout(()=>{
         if(!state.running || state.paused) return;
         if(kind==='collect'){
