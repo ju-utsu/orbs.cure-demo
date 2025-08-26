@@ -1,1039 +1,179 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Neural Focus Trainer - AR/VR Collector</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
-  <script src="https://unpkg.com/aframe-particle-system-component@1.0.9/dist/aframe-particle-system-component.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VR Orb Collector</title>
+  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/1.4.1/aframe-ar.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-    
-    html,body{height:100%;margin:0;background:linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);color:#00f5ff;font-family:'Orbitron', monospace;overflow:hidden}
-    
-    #hud{
-      position:fixed;left:20px;top:20px;z-index:11;
-      background:linear-gradient(135deg, rgba(0,245,255,0.1) 0%, rgba(0,100,255,0.1) 100%);
-      border:2px solid rgba(0,245,255,0.3);
-      padding:15px 20px;border-radius:15px;
-      backdrop-filter:blur(10px);
-      box-shadow:0 8px 32px rgba(0,245,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
-      font-weight:700;text-shadow:0 0 10px rgba(0,245,255,0.5);
-      transition:all 0.3s ease;
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: black;
+      color: white;
     }
-    
-    #hud:hover{
-      box-shadow:0 12px 40px rgba(0,245,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
-      transform:translateY(-2px);
+
+    /* Main Menu Overlay */
+    #mainMenu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      color: #fff;
     }
-    
-    .stat-item{
-      display:flex;justify-content:space-between;align-items:center;
-      margin-bottom:8px;font-size:14px;
+
+    #mainMenu h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
     }
-    
-    .stat-value{
-      color:#00ff88;text-shadow:0 0 8px rgba(0,255,136,0.6);
-      font-weight:900;min-width:50px;text-align:right;
+
+    .menu-option {
+      margin: 10px;
     }
-    
-    #focusBar{
-      width:200px;height:6px;background:rgba(255,255,255,0.1);
-      border-radius:3px;margin-top:10px;overflow:hidden;
+
+    .menu-option label {
+      font-size: 1.2em;
     }
-    
-    #focusProgress{
-      height:100%;background:linear-gradient(90deg, #ff0080, #00f5ff, #00ff88);
-      width:100%;transition:width 0.3s ease;
-      box-shadow:0 0 10px rgba(0,245,255,0.6);
+
+    select, button {
+      padding: 10px;
+      font-size: 1em;
+      margin-left: 10px;
     }
-    
-    #toast{
-      position:fixed;left:50%;bottom:30px;transform:translateX(-50%);
-      background:linear-gradient(135deg, rgba(0,245,255,0.2), rgba(0,100,255,0.2));
-      border:1px solid rgba(0,245,255,0.4);
-      padding:12px 24px;border-radius:25px;display:none;z-index:12;
-      backdrop-filter:blur(15px);
-      font-size:14px;font-weight:700;
-      box-shadow:0 8px 32px rgba(0,245,255,0.3);
-      animation:toastSlide 0.3s ease-out;
+
+    #startBtn {
+      margin-top: 30px;
+      background: #00ffcc;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
     }
-    
-    @keyframes toastSlide{
-      from{transform:translateX(-50%) translateY(50px);opacity:0}
-      to{transform:translateX(-50%) translateY(0);opacity:1}
+
+    #startBtn:hover {
+      background: #00ddaa;
     }
-    
-    #menuOverlay{
-      display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
-      z-index:20;background:linear-gradient(135deg, rgba(10,20,40,0.95), rgba(20,30,60,0.95));
-      padding:30px;border-radius:20px;color:#00f5ff;width:400px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.8), 0 0 0 2px rgba(0,245,255,0.3);
-      backdrop-filter:blur(20px);
-    }
-    
-    #menuOverlay h3{
-      margin:0 0 20px 0;font-size:24px;font-weight:900;
-      text-align:center;color:#00ff88;
-      text-shadow:0 0 15px rgba(0,255,136,0.6);
-    }
-    
-    #menuOverlay label{
-      font-size:14px;font-weight:700;display:block;margin-top:15px;
-      color:#00f5ff;text-shadow:0 0 8px rgba(0,245,255,0.4);
-    }
-    
-    #menuOverlay input{
-      width:100%;padding:12px 15px;margin-top:8px;margin-bottom:15px;
-      border-radius:10px;border:2px solid rgba(0,245,255,0.3);
-      background:rgba(0,20,40,0.8);color:#00f5ff;
-      font-family:'Orbitron', monospace;font-weight:700;
-      transition:all 0.3s ease;
-    }
-    
-    #menuOverlay input:focus{
-      border-color:#00f5ff;box-shadow:0 0 15px rgba(0,245,255,0.4);
-      outline:none;
-    }
-    
-    .button-row{display:flex;gap:15px;margin-top:20px}
-    
-    .cyber-button{
-      flex:1;padding:15px;border-radius:12px;border:none;
-      background:linear-gradient(135deg, #00f5ff, #0080ff);
-      color:#001122;cursor:pointer;font-weight:900;
-      font-family:'Orbitron', monospace;
-      transition:all 0.3s ease;
-      box-shadow:0 4px 15px rgba(0,245,255,0.3);
-      text-transform:uppercase;letter-spacing:1px;
-    }
-    
-    .cyber-button:hover{
-      transform:translateY(-2px);
-      box-shadow:0 8px 25px rgba(0,245,255,0.5);
-      background:linear-gradient(135deg, #00ff88, #00f5ff);
-    }
-    
-    .cyber-button.danger{
-      background:linear-gradient(135deg, #ff0080, #ff4080);
-      color:#ffffff;
-    }
-    
-    .cyber-button.danger:hover{
-      background:linear-gradient(135deg, #ff4080, #ff8080);
-    }
-    
-    #modeSelector{
-      position:fixed;right:20px;top:20px;z-index:15;
-      background:rgba(0,20,40,0.9);border:2px solid rgba(0,245,255,0.3);
-      border-radius:15px;padding:15px;backdrop-filter:blur(10px);
-    }
-    
-    .mode-button{
-      display:block;width:100%;margin-bottom:10px;padding:10px;
-      background:rgba(0,245,255,0.1);border:1px solid rgba(0,245,255,0.3);
-      color:#00f5ff;border-radius:8px;cursor:pointer;
-      font-family:'Orbitron', monospace;font-weight:700;
-      transition:all 0.3s ease;
-    }
-    
-    .mode-button:hover, .mode-button.active{
-      background:rgba(0,245,255,0.2);
-      box-shadow:0 0 15px rgba(0,245,255,0.4);
-    }
-    
-    #difficultyIndicator{
-      position:fixed;right:20px;bottom:20px;z-index:15;
-      background:rgba(0,40,20,0.9);border:2px solid rgba(0,255,136,0.3);
-      border-radius:15px;padding:15px;backdrop-filter:blur(10px);
-      text-align:center;
-    }
-    
-    .difficulty-level{
-      font-size:18px;font-weight:900;color:#00ff88;
-      text-shadow:0 0 10px rgba(0,255,136,0.6);
-    }
-    
-    .loading-screen{
-      position:fixed;top:0;left:0;width:100%;height:100%;
-      background:linear-gradient(135deg, #0a0a0a, #1a1a2e);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      z-index:100;transition:opacity 0.5s ease;
-    }
-    
-    .loading-title{
-      font-size:36px;font-weight:900;color:#00f5ff;
-      text-shadow:0 0 20px rgba(0,245,255,0.8);
-      margin-bottom:30px;animation:pulse 2s infinite;
-    }
-    
-    @keyframes pulse{
-      0%,100%{text-shadow:0 0 20px rgba(0,245,255,0.8)}
-      50%{text-shadow:0 0 30px rgba(0,245,255,1), 0 0 40px rgba(0,245,255,0.6)}
-    }
-    
-    .loading-bar{
-      width:300px;height:4px;background:rgba(255,255,255,0.1);
-      border-radius:2px;overflow:hidden;
-    }
-    
-    .loading-progress{
-      height:100%;background:linear-gradient(90deg, #ff0080, #00f5ff, #00ff88);
-      width:0%;animation:loadProgress 3s ease-in-out forwards;
-    }
-    
-    @keyframes loadProgress{
-      to{width:100%}
+
+    /* AR/VR buttons from A-Frame */
+    .a-enter-vr-button, .a-enter-ar-button {
+      z-index: 5 !important;
     }
   </style>
 </head>
 <body>
-  <div class="loading-screen" id="loadingScreen">
-    <div class="loading-title">Neural Focus Trainer</div>
-    <div class="loading-bar">
-      <div class="loading-progress"></div>
+  <!-- Main Menu -->
+  <div id="mainMenu">
+    <h1>VR Orb Collector</h1>
+    <div class="menu-option">
+      <label for="gazeTime">Gaze Timer:</label>
+      <select id="gazeTime">
+        <option value="1000">1 sec</option>
+        <option value="2000">2 sec</option>
+        <option value="3000">3 sec</option>
+      </select>
     </div>
-    <div style="margin-top:20px;color:#00f5ff;font-weight:700">Initializing AR/VR Environment...</div>
+    <div class="menu-option">
+      <label for="difficulty">Difficulty:</label>
+      <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+    </div>
+    <button id="startBtn">Start Game</button>
   </div>
 
-  <div id="hud">
-    <div class="stat-item">
-      <span>Neural Score:</span>
-      <span class="stat-value" id="scoreVal">0</span>
-    </div>
-    <div class="stat-item">
-      <span>Time Remaining:</span>
-      <span class="stat-value" id="timeVal">90</span>s
-    </div>
-    <div class="stat-item">
-      <span>Focus Chain:</span>
-      <span class="stat-value" id="comboVal">0</span>
-    </div>
-    <div class="stat-item">
-      <span>Accuracy:</span>
-      <span class="stat-value" id="accuracyVal">100</span>%
-    </div>
-    <div id="focusBar">
-      <div id="focusProgress"></div>
-    </div>
-  </div>
-
-  <div id="modeSelector">
-    <button class="mode-button active" onclick="switchMode('vr')">🥽 VR Mode</button>
-    <button class="mode-button" onclick="switchMode('ar')">📱 AR Mode</button>
-    <button class="mode-button" onclick="openMenu()">⚙️ Settings</button>
-  </div>
-
-  <div id="difficultyIndicator">
-    <div>Difficulty</div>
-    <div class="difficulty-level" id="difficultyLevel">NEURAL</div>
-  </div>
-
-  <div id="toast"></div>
-
-  <div id="menuOverlay" role="dialog" aria-hidden="true">
-    <h3>⚡ Neural Configuration ⚡</h3>
-    <label>🎯 Target Lock Time (ms)</label>
-    <input id="orbGazeInput" type="number" min="100" max="2000" step="50" value="800">
-    <label>⚠️ Danger Response Time (ms)</label>
-    <input id="dangerGazeInput" type="number" min="200" max="3000" step="100" value="1200">
-    <label>🧠 Training Duration (seconds)</label>
-    <input id="durationInput" type="number" min="30" max="300" step="30" value="90">
-    <div class="button-row">
-      <button class="cyber-button" id="saveSettings">💾 Save Config</button>
-      <button class="cyber-button danger" id="restartBtn">🔄 Restart</button>
-    </div>
-    <div class="button-row">
-      <button class="cyber-button" id="startGameBtn">🚀 Begin Training</button>
-    </div>
-  </div>
-
-  <a-scene 
-    renderer="antialias:true; colorManagement:true; physicallyCorrectLights:true" 
-    background="color:#000511"
-    cursor="rayOrigin: mouse"
-    webxr="requiredFeatures: hit-test,local-floor;
-           optionalFeatures: dom-overlay,unbounded;
-           overlayElement: #menuOverlay;">
-    
-    <a-assets>
-      <audio id="collectSound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+LvwGUSBShMEe7Cp2AcCCt8z++RQQwUWrLl85pPFAtRquDtumiOr8e7W+Xj5xp/zdzLPzS7vcU="></audio>
-      <audio id="dangerSound" src="data:audio/wav;base64,UklGRiQEAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0YQAEAAB4nE1SyRLCMAyk7lz5/1+yLd85cHKYlGVJK2uwxWAYhvGo2J7YIv/85X9fxfd/f/bx61/75lf/2He/+r3v//rd/7rI4JxzjjH6EMIQ"></audio>
-    </a-assets>
-
-    <!-- Advanced Environment -->
-    <a-entity environment="preset: none; skyType: gradient; skyColor: #000511; horizonColor: #001122; groundColor: #000A0A; dressing: none; fog: 0.05"></a-entity>
-    
-    <!-- Ambient particles -->
-    <a-entity particle-system="preset: default; color: #00f5ff,#ff0080; particleCount: 100; maxAge: 3; size: 0.5; velocityValue: 0 0.1 0; velocitySpread: 2 1 2; accelerationValue: 0 -0.05 0; opacity: 0.6"></a-entity>
-    
-    <!-- Dynamic lighting -->
-    <a-light type="ambient" color="#001122" intensity="0.3"></a-light>
-    <a-light type="point" position="0 8 0" color="#00f5ff" intensity="0.8"></a-light>
-    <a-light type="point" position="-10 5 5" color="#ff0080" intensity="0.5"></a-light>
-    <a-light type="point" position="10 5 -5" color="#00ff88" intensity="0.5"></a-light>
-
-    <!-- Spatial grid lines -->
-    <a-entity id="grid-system">
-      <!-- Horizontal grid planes -->
-      <a-plane position="0 0 0" rotation="-90 0 0" width="100" height="100" 
-               material="color: #00f5ff; opacity: 0.05; transparent: true; side: double"
-               geometry="primitive: plane; segmentsWidth: 20; segmentsHeight: 20"></a-plane>
+  <!-- A-Frame Scene -->
+  <a-scene id="vrScene" embedded arjs vr-mode-ui="enabled: true" renderer="antialias: true" style="display:none;">
+    <!-- Glowing Grid Environment -->
+    <a-entity geometry="primitive: plane; height: 100; width: 100"
+              rotation="-90 0 0"
+              material="shader: standard; color: #111; emissive: #0ff; emissiveIntensity: 0.4; wireframe: true; wireframeLinewidth: 2">
     </a-entity>
 
-    <!-- Camera rig -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls wasd-controls="acceleration: 20">
-        <!-- Advanced reticle with animation -->
-        <a-entity position="0 0 -1.2">
-          <a-ring id="reticle" 
-                  radius-inner="0.01" radius-outer="0.025" 
-                  color="#00f5ff" 
-                  material="opacity: 0.8; shader: flat"
-                  animation__pulse="property: scale; to: 1.2 1.2 1; dur: 1000; loop: true; dir: alternate; easing: easeInOutQuad"></a-ring>
-          <a-ring radius-inner="0.025" radius-outer="0.035" 
-                  color="#ffffff" 
-                  material="opacity: 0.3; shader: flat"
-                  animation__rotate="property: rotation; to: 0 0 360; dur: 4000; loop: true; easing: linear"></a-ring>
-        </a-entity>
-        
-        <!-- Enhanced raycaster -->
-        <a-entity id="ray" 
-                  raycaster="objects: .interactable; interval: 16; far: 50; near: 0.1" 
-                  position="0 0 0"></a-entity>
-        
-        <!-- VR HUD -->
-        <a-entity id="vr-hud" position="-0.4 0.25 -1" visible="false">
-          <a-plane width="0.5" height="0.3" 
-                   color="#000511" 
-                   material="opacity: 0.8; shader: flat"
-                   geometry="primitive: plane"></a-plane>
-          <a-text id="vrScore" 
-                  value="Neural Score: 0" 
-                  color="#00f5ff" 
-                  position="-0.2 0.08 0.01" 
-                  width="2"
-                  font="roboto"></a-text>
-          <a-text id="vrTime" 
-                  value="Time: 90s" 
-                  color="#00ff88" 
-                  position="-0.2 0.02 0.01" 
-                  width="2"
-                  font="roboto"></a-text>
-          <a-text id="vrCombo" 
-                  value="Chain: 0" 
-                  color="#ff0080" 
-                  position="-0.2 -0.04 0.01" 
-                  width="2"
-                  font="roboto"></a-text>
-        </a-entity>
-      </a-entity>
+    <!-- Camera + Cursor -->
+    <a-entity camera look-controls>
+      <a-cursor fuse="true" fuse-timeout="2000" material="color: #0ff; shader: flat;"></a-cursor>
     </a-entity>
 
-    <!-- Spawner containers -->
-    <a-entity id="collect-spawner"></a-entity>
-    <a-entity id="danger-spawner"></a-entity>
-    <a-entity id="power-spawner"></a-entity>
-
-    <!-- Game over panel -->
-    <a-entity id="gameOverPanel" visible="false">
-      <a-entity position="0 1.6 -2">
-        <a-plane width="2" height="1" 
-                 color="#000511" 
-                 material="opacity: 0.95; shader: flat"></a-plane>
-        <a-text id="gameOverText" 
-                value="TRAINING COMPLETE" 
-                color="#00f5ff" 
-                position="-0.8 0.2 0.01" 
-                width="4"
-                font="roboto"></a-text>
-        <a-text id="finalStats" 
-                value="Analysis Processing..." 
-                color="#00ff88" 
-                position="-0.8 -0.1 0.01" 
-                width="3"
-                font="roboto"></a-text>
-      </a-entity>
-    </a-entity>
-
+    <!-- Lights -->
+    <a-entity light="type: ambient; color: #fff; intensity: 0.6"></a-entity>
+    <a-entity light="type: point; intensity: 1.2; distance: 50; decay: 2" position="0 5 0"></a-entity>
   </a-scene>
 
   <script>
-    // Enhanced game state with neural training metrics
-    const state = {
-      running: false,
-      paused: false,
-      score: 0,
-      combo: 0,
-      maxCombo: 0,
-      totalTargets: 0,
-      targetsHit: 0,
-      orbGazeMs: 800,
-      dangerGazeMs: 1200,
-      timers: new Map(),
-      currentMode: 'vr',
-      difficulty: 1,
-      roundTime: 90,
-      roundTimer: null,
-      focusLevel: 100,
-      reactionTimes: []
-    };
+    const startBtn = document.getElementById('startBtn');
+    const mainMenu = document.getElementById('mainMenu');
+    const vrScene = document.getElementById('vrScene');
+    const gazeCursor = document.querySelector('a-cursor');
 
-    // DOM elements
-    const elements = {
-      scoreVal: document.getElementById('scoreVal'),
-      timeVal: document.getElementById('timeVal'),
-      comboVal: document.getElementById('comboVal'),
-      accuracyVal: document.getElementById('accuracyVal'),
-      toast: document.getElementById('toast'),
-      overlay: document.getElementById('menuOverlay'),
-      orbInput: document.getElementById('orbGazeInput'),
-      dangerInput: document.getElementById('dangerGazeInput'),
-      durationInput: document.getElementById('durationInput'),
-      vrScore: document.getElementById('vrScore'),
-      vrTime: document.getElementById('vrTime'),
-      vrCombo: document.getElementById('vrCombo'),
-      focusProgress: document.getElementById('focusProgress'),
-      difficultyLevel: document.getElementById('difficultyLevel'),
-      loadingScreen: document.getElementById('loadingScreen')
-    };
+    startBtn.addEventListener('click', () => {
+      const gazeTime = document.getElementById('gazeTime').value;
+      const difficulty = document.getElementById('difficulty').value;
 
-    // Initialize after loading
-    setTimeout(() => {
-      elements.loadingScreen.style.opacity = '0';
-      setTimeout(() => {
-        elements.loadingScreen.style.display = 'none';
-        showToast('🧠 Neural Focus Trainer Ready!', 2000);
-      }, 500);
-    }, 3000);
+      // Apply gaze time to cursor
+      gazeCursor.setAttribute('fuse-timeout', gazeTime);
 
-    // Utility functions
-    function showToast(msg, ms = 1500) {
-      elements.toast.textContent = msg;
-      elements.toast.style.display = 'block';
-      clearTimeout(elements.toast._timeout);
-      elements.toast._timeout = setTimeout(() => {
-        elements.toast.style.display = 'none';
-      }, ms);
-    }
-
-    function updateStats() {
-      elements.scoreVal.textContent = state.score;
-      elements.comboVal.textContent = state.combo;
-      elements.timeVal.textContent = state.roundTime;
-      
-      const accuracy = state.totalTargets > 0 ? Math.round((state.targetsHit / state.totalTargets) * 100) : 100;
-      elements.accuracyVal.textContent = accuracy;
-      
-      // Update VR HUD
-      if (elements.vrScore) elements.vrScore.setAttribute('value', `Neural Score: ${state.score}`);
-      if (elements.vrTime) elements.vrTime.setAttribute('value', `Time: ${state.roundTime}s`);
-      if (elements.vrCombo) elements.vrCombo.setAttribute('value', `Chain: ${state.combo}`);
-      
-      // Update focus bar
-      elements.focusProgress.style.width = `${state.focusLevel}%`;
-      
-      // Dynamic difficulty adjustment
-      if (state.combo > 5 && state.difficulty < 3) {
-        state.difficulty++;
-        updateDifficulty();
-      }
-    }
-
-    function updateDifficulty() {
-      const levels = ['BASIC', 'NEURAL', 'ENHANCED', 'MASTER'];
-      elements.difficultyLevel.textContent = levels[state.difficulty - 1] || 'NEURAL';
-    }
-
-    // Enhanced positioning with difficulty scaling
-    function getRandomPosition() {
-      const baseRadius = 4;
-      const maxRadius = 8 + (state.difficulty * 2);
-      const radius = baseRadius + Math.random() * (maxRadius - baseRadius);
-      const angle = Math.random() * Math.PI * 2;
-      const heightMin = 0.5;
-      const heightMax = 2.5 + (state.difficulty * 0.5);
-      const y = heightMin + Math.random() * (heightMax - heightMin);
-      
-      return {
-        x: Math.cos(angle) * radius,
-        y: y,
-        z: Math.sin(angle) * radius
-      };
-    }
-
-    // Enhanced orb spawning with visual effects
-    function spawnOrb() {
-      const pos = getRandomPosition();
-      const orb = document.createElement('a-entity');
-      
-      // Core sphere with glow effect
-      const sphere = document.createElement('a-sphere');
-      sphere.setAttribute('radius', '0.15');
-      sphere.setAttribute('material', `
-        color: #00f5ff;
-        emissive: #00f5ff;
-        emissiveIntensity: 0.5;
-        metalness: 0.8;
-        roughness: 0.2;
-        transparent: true;
-        opacity: 0.9
-      `);
-      
-      // Outer glow ring
-      const ring = document.createElement('a-ring');
-      ring.setAttribute('radius-inner', '0.2');
-      ring.setAttribute('radius-outer', '0.3');
-      ring.setAttribute('material', `
-        color: #00f5ff;
-        transparent: true;
-        opacity: 0.3;
-        side: double
-      `);
-      ring.setAttribute('animation__rotate', 'property: rotation; to: 360 0 0; dur: 3000; loop: true; easing: linear');
-      
-      orb.appendChild(sphere);
-      orb.appendChild(ring);
-      
-      orb.classList.add('interactable', 'collectable');
-      orb.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-      
-      // Enhanced floating animation
-      const floatHeight = 0.3 + Math.random() * 0.2;
-      const floatDuration = 2000 + Math.random() * 2000;
-      orb.setAttribute('animation__float', `
-        property: position; 
-        to: ${pos.x} ${pos.y + floatHeight} ${pos.z}; 
-        dur: ${floatDuration}; 
-        loop: true; 
-        dir: alternate; 
-        easing: easeInOutSine
-      `);
-      
-      // Pulsing glow effect
-      sphere.setAttribute('animation__pulse', `
-        property: material.emissiveIntensity; 
-        to: 0.8; 
-        dur: 1500; 
-        loop: true; 
-        dir: alternate; 
-        easing: easeInOutQuad
-      `);
-      
-      orb.dataset.gaze = 'collect';
-      orb.dataset.spawnTime = Date.now();
-      
-      document.getElementById('collect-spawner').appendChild(orb);
-    }
-
-    // Enhanced danger cube spawning
-    function spawnDanger() {
-      const pos = getRandomPosition();
-      const danger = document.createElement('a-entity');
-      
-      // Core box with warning effects
-      const box = document.createElement('a-box');
-      box.setAttribute('width', '0.4');
-      box.setAttribute('height', '0.4');
-      box.setAttribute('depth', '0.4');
-      box.setAttribute('material', `
-        color: #ff0080;
-        emissive: #ff0080;
-        emissiveIntensity: 0.6;
-        metalness: 0.9;
-        roughness: 0.1;
-        transparent: true;
-        opacity: 0.8
-      `);
-      
-      // Warning particles
-      const particles = document.createElement('a-entity');
-      particles.setAttribute('particle-system', `
-        preset: default;
-        color: #ff0080,#ff4080;
-        particleCount: 20;
-        maxAge: 2;
-        size: 0.1;
-        velocityValue: 0 0.2 0;
-        velocitySpread: 0.5 0.5 0.5
-      `);
-      
-      danger.appendChild(box);
-      danger.appendChild(particles);
-      
-      danger.classList.add('interactable', 'danger');
-      danger.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-      
-      // Multi-axis rotation
-      box.setAttribute('animation__rotate', `
-        property: rotation; 
-        to: 360 360 360; 
-        dur: 4000; 
-        loop: true; 
-        easing: linear
-      `);
-      
-      // Warning pulse
-      box.setAttribute('animation__warning', `
-        property: material.emissiveIntensity; 
-        to: 1.0; 
-        dur: 500; 
-        loop: true; 
-        dir: alternate; 
-        easing: easeInOutQuad
-      `);
-      
-      danger.dataset.gaze = 'danger';
-      
-      document.getElementById('danger-spawner').appendChild(danger);
-    }
-
-    // Continuous spawning system with difficulty scaling
-    function startSpawning() {
-      const orbInterval = Math.max(800 - (state.difficulty * 100), 400);
-      const dangerInterval = Math.max(3000 - (state.difficulty * 200), 1500);
-      
-      const spawnOrbs = () => {
-        if (!state.running || state.paused) return;
-        const maxOrbs = 8 + state.difficulty;
-        if (document.getElementById('collect-spawner').children.length < maxOrbs) {
-          spawnOrb();
-        }
-      };
-      
-      const spawnDangers = () => {
-        if (!state.running || state.paused) return;
-        const maxDangers = 3 + Math.floor(state.difficulty / 2);
-        if (document.getElementById('danger-spawner').children.length < maxDangers) {
-          spawnDanger();
-        }
-      };
-      
-      setInterval(spawnOrbs, orbInterval);
-      setInterval(spawnDangers, dangerInterval);
-    }
-
-    // Enhanced interaction system
-    const ray = document.getElementById('ray');
-    const reticle = document.getElementById('reticle');
-    let hoveredElement = null;
-    let gazeStartTime = null;
-
-    ray.addEventListener('raycaster-intersection', (e) => {
-      const intersections = e.detail.intersections || [];
-      const element = intersections.length > 0 ? intersections[0].object.el : null;
-      
-      if (element && element !== hoveredElement) {
-        if (hoveredElement) clearGaze(hoveredElement);
-        startGaze(element);
-        hoveredElement = element;
-      }
-    });
-
-    ray.addEventListener('raycaster-intersection-cleared', () => {
-      if (hoveredElement) {
-        clearGaze(hoveredElement);
-        hoveredElement = null;
-        resetReticle();
-      }
-    });
-
-    function startGaze(element) {
-      const gazeType = element.dataset.gaze;
-      if (!gazeType || !state.running || state.paused) return;
-
-      gazeStartTime = Date.now();
-      
-      // Visual feedback based on element type
-      if (gazeType === 'collect') {
-        reticle.setAttribute('color', '#00ff88');
-        reticle.setAttribute('animation__focus', `
-          property: scale; 
-          to: 1.5 1.5 1; 
-          dur: ${state.orbGazeMs}; 
-          easing: linear
-        `);
-      } else if (gazeType === 'danger') {
-        reticle.setAttribute('color', '#ff0080');
-        reticle.setAttribute('animation__warning', `
-          property: scale; 
-          to: 2 2 1; 
-          dur: ${state.dangerGazeMs}; 
-          easing: linear
-        `);
-      }
-
-      // Set gaze timer
-      const gazeTime = gazeType === 'collect' ? state.orbGazeMs : state.dangerGazeMs;
-      const timer = setTimeout(() => {
-        if (!state.running || state.paused) return;
-        processGazeAction(element, gazeType);
-      }, gazeTime);
-
-      state.timers.set(element, timer);
-    }
-
-    function clearGaze(element) {
-      const timer = state.timers.get(element);
-      if (timer) {
-        clearTimeout(timer);
-        state.timers.delete(element);
-      }
-      reticle.removeAttribute('animation__focus');
-      reticle.removeAttribute('animation__warning');
-    }
-
-    function resetReticle() {
-      reticle.setAttribute('color', '#00f5ff');
-      reticle.setAttribute('scale', '1 1 1');
-    }
-
-    function processGazeAction(element, gazeType) {
-      const reactionTime = Date.now() - gazeStartTime;
-      
-      if (gazeType === 'collect') {
-        // Successful collection
-        const spawnTime = parseInt(element.dataset.spawnTime) || Date.now();
-        const existenceTime = Date.now() - spawnTime;
-        
-        // Bonus points for quick reactions and combo chains
-        let points = 1;
-        if (reactionTime < 600) points += 1; // Quick reaction bonus
-        if (state.combo > 0) points += Math.floor(state.combo / 3); // Combo bonus
-        if (existenceTime < 2000) points += 1; // Fresh target bonus
-        
-        state.score += points;
-        state.combo++;
-        state.maxCombo = Math.max(state.maxCombo, state.combo);
-        state.targetsHit++;
-        state.reactionTimes.push(reactionTime);
-        
-        // Visual feedback
-        createCollectionEffect(element.object3D.position);
-        playCollectSound();
-        showToast(`+${points} Neural Points! Chain: ${state.combo}`, 800);
-        
-        // Remove element
-        element.parentNode.removeChild(element);
-        
-        // Focus level boost
-        state.focusLevel = Math.min(100, state.focusLevel + 2);
-        
-      } else if (gazeType === 'danger') {
-        // Danger interaction - game over
-        createDangerEffect(element.object3D.position);
-        playDangerSound();
-        endGame('⚠️ Neural Hazard Detected - Training Terminated');
-      }
-      
-      state.totalTargets++;
-      updateStats();
-    }
-
-    // Enhanced visual effects
-    function createCollectionEffect(position) {
-      // Particle burst
-      for (let i = 0; i < 15; i++) {
-        const particle = document.createElement('a-sphere');
-        particle.setAttribute('radius', '0.02');
-        particle.setAttribute('material', `
-          color: #00ff88;
-          emissive: #00ff88;
-          emissiveIntensity: 0.8;
-          transparent: true;
-          opacity: 0.9
-        `);
-        
-        particle.object3D.position.copy(position);
-        document.querySelector('a-scene').appendChild(particle);
-        
-        // Random trajectory
-        const dx = position.x + (Math.random() - 0.5) * 1.5;
-        const dy = position.y + Math.random() * 1.2 + 0.3;
-        const dz = position.z + (Math.random() - 0.5) * 1.5;
-        
-        particle.setAttribute('animation__move', `
-          property: position; 
-          to: ${dx} ${dy} ${dz}; 
-          dur: 800; 
-          easing: easeOutQuad
-        `);
-        
-        particle.setAttribute('animation__fade', `
-          property: material.opacity; 
-          to: 0; 
-          dur: 800; 
-          delay: 200
-        `);
-        
-        // Cleanup
-        setTimeout(() => {
-          if (particle.parentNode) particle.parentNode.removeChild(particle);
-        }, 1000);
-      }
-      
-      // Success ring
-      const ring = document.createElement('a-ring');
-      ring.setAttribute('radius-inner', '0.3');
-      ring.setAttribute('radius-outer', '0.5');
-      ring.setAttribute('material', `
-        color: #00ff88;
-        transparent: true;
-        opacity: 0.8;
-        side: double
-      `);
-      ring.object3D.position.copy(position);
-      document.querySelector('a-scene').appendChild(ring);
-      
-      ring.setAttribute('animation__expand', `
-        property: geometry.radiusOuter; 
-        to: 1.5; 
-        dur: 600; 
-        easing: easeOutQuad
-      `);
-      
-      ring.setAttribute('animation__fade', `
-        property: material.opacity; 
-        to: 0; 
-        dur: 600
-      `);
-      
-      setTimeout(() => {
-        if (ring.parentNode) ring.parentNode.removeChild(ring);
-      }, 700);
-    }
-
-    function createDangerEffect(position) {
-      // Danger explosion effect
-      const explosion = document.createElement('a-entity');
-      explosion.setAttribute('particle-system', `
-        preset: default;
-        color: #ff0080,#ff4080,#ffffff;
-        particleCount: 50;
-        maxAge: 1;
-        size: 0.1;
-        velocityValue: 0 2 0;
-        velocitySpread: 3 3 3;
-        accelerationValue: 0 -2 0
-      `);
-      explosion.object3D.position.copy(position);
-      document.querySelector('a-scene').appendChild(explosion);
-      
-      setTimeout(() => {
-        if (explosion.parentNode) explosion.parentNode.removeChild(explosion);
-      }, 2000);
-    }
-
-    // Audio system
-    function playCollectSound() {
-      const sound = document.getElementById('collectSound');
-      if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-      }
-    }
-
-    function playDangerSound() {
-      const sound = document.getElementById('dangerSound');
-      if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-      }
-    }
-
-    // Game control functions
-    function startGame() {
-      // Reset state
-      state.running = true;
-      state.paused = false;
-      state.score = 0;
-      state.combo = 0;
-      state.maxCombo = 0;
-      state.totalTargets = 0;
-      state.targetsHit = 0;
-      state.difficulty = 1;
-      state.focusLevel = 100;
-      state.reactionTimes = [];
-      state.roundTime = parseInt(elements.durationInput.value) || 90;
-      
-      // Clear existing elements
-      clearAllSpawned();
-      
-      // Start spawning and timer
-      startSpawning();
-      startTimer();
-      
-      updateStats();
-      updateDifficulty();
-      
-      showToast('🚀 Neural Training Initiated!', 1500);
-    }
-
-    function startTimer() {
-      clearInterval(state.roundTimer);
-      state.roundTimer = setInterval(() => {
-        if (!state.running || state.paused) return;
-        
-        state.roundTime--;
-        
-        // Focus level decreases over time (simulating fatigue)
-        if (state.roundTime % 10 === 0) {
-          state.focusLevel = Math.max(0, state.focusLevel - 1);
-        }
-        
-        updateStats();
-        
-        if (state.roundTime <= 0) {
-          endGame('🎯 Training Session Complete!');
-        } else if (state.roundTime <= 10) {
-          showToast(`⏰ ${state.roundTime} seconds remaining!`, 800);
-        }
-      }, 1000);
-    }
-
-    function endGame(message) {
-      state.running = false;
-      state.paused = true;
-      
-      clearInterval(state.roundTimer);
-      clearAllTimers();
-      
-      // Calculate final statistics
-      const avgReactionTime = state.reactionTimes.length > 0 
-        ? Math.round(state.reactionTimes.reduce((a, b) => a + b, 0) / state.reactionTimes.length)
-        : 0;
-      
-      const accuracy = state.totalTargets > 0 
-        ? Math.round((state.targetsHit / state.totalTargets) * 100) 
-        : 100;
-      
-      const focusScore = Math.round((state.score * accuracy * state.focusLevel) / 10000);
-      
-      // Show game over panel
-      const panel = document.getElementById('gameOverPanel');
-      const gameOverText = document.getElementById('gameOverText');
-      const finalStats = document.getElementById('finalStats');
-      
-      gameOverText.setAttribute('value', message);
-      finalStats.setAttribute('value', 
-        `Final Score: ${state.score} | Max Chain: ${state.maxCombo}\n` +
-        `Accuracy: ${accuracy}% | Avg Reaction: ${avgReactionTime}ms\n` +
-        `Focus Rating: ${focusScore}/100`
-      );
-      
-      panel.setAttribute('visible', 'true');
-      
-      showToast('📊 Neural Analysis Complete', 2000);
-    }
-
-    function clearAllSpawned() {
-      ['collect-spawner', 'danger-spawner', 'power-spawner'].forEach(id => {
-        const spawner = document.getElementById(id);
-        while (spawner.firstChild) {
-          spawner.removeChild(spawner.firstChild);
-        }
-      });
-    }
-
-    function clearAllTimers() {
-      state.timers.forEach(timer => clearTimeout(timer));
-      state.timers.clear();
-    }
-
-    // Mode switching
-    function switchMode(mode) {
-      state.currentMode = mode;
-      
-      // Update button states
-      document.querySelectorAll('.mode-button').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      event.target.classList.add('active');
-      
-      // Toggle VR HUD visibility
-      const vrHud = document.getElementById('vr-hud');
-      if (mode === 'vr') {
-        vrHud.setAttribute('visible', 'true');
-        showToast('🥽 VR Mode Activated', 1000);
+      // Difficulty logic: number of orbs & hazards
+      let orbCount, hazardCount;
+      if (difficulty === 'easy') {
+        orbCount = 10; hazardCount = 3;
+      } else if (difficulty === 'medium') {
+        orbCount = 20; hazardCount = 6;
       } else {
-        vrHud.setAttribute('visible', 'false');
-        showToast('📱 AR Mode Activated', 1000);
+        orbCount = 30; hazardCount = 10;
+      }
+
+      // Hide menu, show VR scene
+      mainMenu.style.display = 'none';
+      vrScene.style.display = 'block';
+
+      spawnObjects(orbCount, hazardCount);
+    });
+
+    function spawnObjects(orbCount, hazardCount) {
+      const scene = document.querySelector('a-scene');
+
+      for (let i = 0; i < orbCount; i++) {
+        const orb = document.createElement('a-sphere');
+        orb.setAttribute('radius', '0.4');
+        orb.setAttribute('color', '#00ffff');
+        orb.setAttribute('emissive', '#00ffff');
+        orb.setAttribute('emissiveIntensity', '0.8');
+        orb.setAttribute('position', randomPosition());
+        scene.appendChild(orb);
+      }
+
+      for (let i = 0; i < hazardCount; i++) {
+        const hazard = document.createElement('a-box');
+        hazard.setAttribute('depth', '0.6');
+        hazard.setAttribute('height', '0.6');
+        hazard.setAttribute('width', '0.6');
+        hazard.setAttribute('color', '#ff0044');
+        hazard.setAttribute('emissive', '#ff0044');
+        hazard.setAttribute('emissiveIntensity', '0.8');
+        hazard.setAttribute('position', randomPosition());
+        scene.appendChild(hazard);
       }
     }
 
-    // Settings menu
-    function openMenu() {
-      state.paused = true;
-      elements.overlay.style.display = 'block';
-      elements.overlay.setAttribute('aria-hidden', 'false');
-      
-      // Load current values
-      elements.orbInput.value = state.orbGazeMs;
-      elements.dangerInput.value = state.dangerGazeMs;
-      elements.durationInput.value = state.roundTime;
-      
-      showToast('⚙️ Neural Configuration Panel', 1000);
+    function randomPosition() {
+      const x = (Math.random() * 20 - 10).toFixed(2);
+      const y = (Math.random() * 3 + 1).toFixed(2);
+      const z = (Math.random() * -15 - 5).toFixed(2);
+      return `${x} ${y} ${z}`;
     }
-
-    function closeMenu() {
-      state.paused = false;
-      elements.overlay.style.display = 'none';
-      elements.overlay.setAttribute('aria-hidden', 'true');
-    }
-
-    function saveSettings() {
-      state.orbGazeMs = parseInt(elements.orbInput.value) || state.orbGazeMs;
-      state.dangerGazeMs = parseInt(elements.dangerInput.value) || state.dangerGazeMs;
-      
-      closeMenu();
-      showToast('💾 Configuration Saved!', 1000);
-    }
-
-    // Event listeners
-    document.getElementById('saveSettings').addEventListener('click', saveSettings);
-    document.getElementById('restartBtn').addEventListener('click', () => {
-      closeMenu();
-      startGame();
-    });
-    document.getElementById('startGameBtn').addEventListener('click', () => {
-      closeMenu();
-      startGame();
-    });
-
-    // Keyboard controls
-    document.addEventListener('keydown', (e) => {
-      switch(e.key) {
-        case 'Escape':
-          if (elements.overlay.style.display === 'block') {
-            closeMenu();
-          } else {
-            openMenu();
-          }
-          break;
-        case 'r':
-        case 'R':
-          if (!state.paused) startGame();
-          break;
-        case ' ':
-          e.preventDefault();
-          state.paused = !state.paused;
-          showToast(state.paused ? '⏸️ Paused' : '▶️ Resumed', 800);
-          break;
-      }
-    });
-
-    // Initialize game
-    updateStats();
-    updateDifficulty();
-    
-    // Auto-start after a brief delay
-    setTimeout(() => {
-      showToast('🧠 Ready to begin neural focus training?', 2000);
-      setTimeout(() => {
-        showToast('Press SPACE to pause, ESC for settings, R to restart', 3000);
-      }, 2500);
-    }, 1000);
   </script>
 </body>
-        </html>
+</html>
