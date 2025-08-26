@@ -1,470 +1,415 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Focus Sphere - WebXR Gaze Training</title>
+    <meta charset="utf-8">
+    <title>FocusXR - Gaze Collection Game</title>
+    <meta name="description" content="Futuristic WebXR game to boost focus and reflexes">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/supermedium/superframe@master/components/environment/dist/aframe-environment-component.min.js"></script>
     <style>
         body {
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Arial', sans-serif;
-            overflow: hidden;
-        }
-        
-        canvas {
-            display: block;
-            touch-action: none;
+            margin: 0;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
         }
         
         #ui {
-            position: absolute;
+            position: fixed;
             top: 20px;
             left: 20px;
             right: 20px;
-            z-index: 100;
-            color: white;
-            text-align: center;
-            pointer-events: none;
-        }
-        
-        #score {
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            margin-bottom: 10px;
-        }
-        
-        #level {
-            font-size: 16px;
-            opacity: 0.9;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-        
-        #startButton {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            border: none;
-            color: white;
-            padding: 20px 40px;
+            z-index: 999;
+            color: #00ffff;
             font-size: 18px;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-            pointer-events: all;
-            z-index: 101;
-        }
-        
-        #startButton:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            text-shadow: 0 0 10px #00ffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         #instructions {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 20px;
             right: 20px;
+            z-index: 999;
+            color: #fff;
             text-align: center;
-            color: white;
-            font-size: 14px;
-            opacity: 0.8;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
         }
         
-        .gaze-cursor {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 200;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        .glow {
+            text-shadow: 0 0 10px currentColor;
         }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div id="score">Score: 0</div>
-        <div id="level">Level 1</div>
+        <div>
+            <div class="glow">Score: <span id="score">0</span></div>
+            <div class="glow">Level: <span id="level">1</span></div>
+        </div>
+        <div>
+            <div class="glow">Focus: <span id="focus">100%</span></div>
+            <div class="glow">Time: <span id="timer">60s</span></div>
+        </div>
     </div>
-    
-    <button id="startButton">Start Focus Training</button>
     
     <div id="instructions">
-        Look at the glowing spheres to collect them. Train your focus and reflexes!<br>
-        Works in VR headsets or mobile browser.
+        <h3 style="margin-top:0; color: #00ffff;">🎯 FocusXR Training</h3>
+        <p>Look at the glowing orbs to collect them. Stay focused - missing targets reduces your focus meter!</p>
+        <p><strong>VR/AR:</strong> Use your gaze cursor | <strong>Desktop:</strong> Move mouse to aim</p>
     </div>
-    
-    <div class="gaze-cursor" id="gazeCursor"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <a-scene 
+        vr-mode-ui="enabled: true" 
+        ar-mode-ui="enabled: true"
+        background="color: #0f0f23"
+        fog="type: exponential; density: 0.1; color: #0f0f23"
+        cursor="rayOrigin: mouse; fuse: true; fuseTimeout: 1000"
+        raycaster="objects: .collectible"
+        embedded
+        style="height: 100vh; width: 100vw;">
+        
+        <!-- Assets -->
+        <a-assets>
+            <a-mixin id="collectible" 
+                geometry="primitive: sphere; radius: 0.3" 
+                material="color: #00ffff; emissive: #004444; transparent: true; opacity: 0.8"
+                animation__float="property: position; to: 0 0.5 0; dur: 2000; dir: alternate; loop: true; easing: easeInOutSine"
+                animation__glow="property: components.material.material.emissiveIntensity; to: 0.8; dur: 1000; dir: alternate; loop: true"
+                class="collectible">
+            </a-mixin>
+            
+            <a-mixin id="particle-system"
+                particle-system="preset: dust; particleCount: 100; color: #00ffff, #0066ff; size: 0.5">
+            </a-mixin>
+        </a-assets>
+
+        <!-- Environment -->
+        <a-entity environment="preset: tron; grid: 2x2; gridColor: #00ffff; groundColor: #0f0f23; skyType: atmosphere; skyColor: #0f0f23"></a-entity>
+        
+        <!-- Lighting -->
+        <a-light type="ambient" color="#002244" intensity="0.3"></a-light>
+        <a-light type="directional" position="5 10 5" color="#00ffff" intensity="0.5"></a-light>
+        
+        <!-- Camera with cursor -->
+        <a-entity id="cameraRig" position="0 1.6 3">
+            <a-camera 
+                look-controls="pointerLockEnabled: false"
+                wasd-controls="acceleration: 20"
+                cursor="fuse: true; fuseTimeout: 1500">
+                
+                <!-- VR/AR Cursor -->
+                <a-cursor 
+                    position="0 0 -1"
+                    geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+                    material="color: #00ffff; emissive: #00ffff; emissiveIntensity: 0.5"
+                    animation__fuse="startEvents: fusing; property: scale; to: 1.5 1.5 1.5; dur: 1500"
+                    animation__fusereverse="startEvents: mouseleave; property: scale; to: 1 1 1; dur: 100">
+                </a-cursor>
+            </a-camera>
+        </a-entity>
+
+        <!-- Game Objects Container -->
+        <a-entity id="gameObjects"></a-entity>
+        
+        <!-- Particle Effects Container -->
+        <a-entity id="particles"></a-entity>
+        
+        <!-- Sound Effects -->
+        <a-entity id="sounds">
+            <a-sound id="collectSound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhCSuEzvLWgC4kMIHL8ttwIBw9ibVnhKFhI3L5nD6RjQNZBsU7pKe1HBIgRUL8hBmGFxcQKZxKWxPqBIKHaA==" autoplay="false" loop="false" volume="0.5"></a-sound>
+            <a-sound id="missSound" src="data:audio/wav;base64,UklGRp4CAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YXoCAAC4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4" autoplay="false" loop="false" volume="0.3"></a-sound>
+        </a-entity>
+    </a-scene>
+
     <script>
-        // Game state
-        let scene, camera, renderer, raycaster;
-        let spheres = [];
-        let particles = [];
-        let score = 0;
-        let level = 1;
-        let gameStarted = false;
-        let xrSession = null;
-        let gazeCursor;
+        // Game State
+        let gameState = {
+            score: 0,
+            level: 1,
+            focus: 100,
+            timeLeft: 60,
+            gameActive: true,
+            objectsCollected: 0,
+            objectsMissed: 0,
+            spawnRate: 3000, // ms between spawns
+            objectLifetime: 8000, // how long objects stay alive
+            maxObjects: 3
+        };
+
+        // Game Elements
+        const scene = document.querySelector('a-scene');
+        const gameObjects = document.querySelector('#gameObjects');
+        const particles = document.querySelector('#particles');
         
-        // Game settings
-        const SPHERE_COUNT = 5;
-        const GAZE_TIME = 1000; // ms to collect
-        const LEVEL_THRESHOLD = 10;
-        
-        // Initialize the game
-        function init() {
-            // Scene setup
-            scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x667eea, 10, 50);
+        // UI Elements
+        const scoreEl = document.getElementById('score');
+        const levelEl = document.getElementById('level');
+        const focusEl = document.getElementById('focus');
+        const timerEl = document.getElementById('timer');
+        const instructionsEl = document.getElementById('instructions');
+
+        // Initialize game when scene loads
+        scene.addEventListener('loaded', initGame);
+
+        function initGame() {
+            console.log('Game initialized!');
+            updateUI();
+            startGameLoop();
             
-            // Camera setup
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.6, 0);
-            
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(renderer.domElement);
-            
-            // Enable XR
-            renderer.xr.enabled = true;
-            
-            // Raycaster for gaze detection
-            raycaster = new THREE.Raycaster();
-            
-            // Gaze cursor
-            gazeCursor = document.getElementById('gazeCursor');
-            
-            // Create environment
-            createEnvironment();
-            
-            // Event listeners
-            document.getElementById('startButton').addEventListener('click', startGame);
-            window.addEventListener('resize', onWindowResize);
-            renderer.domElement.addEventListener('mousemove', onMouseMove);
-            renderer.domElement.addEventListener('touchmove', onTouchMove);
-            
-            // Start render loop
-            renderer.setAnimationLoop(animate);
+            // Hide instructions after 5 seconds
+            setTimeout(() => {
+                instructionsEl.style.opacity = '0';
+                setTimeout(() => {
+                    instructionsEl.style.display = 'none';
+                }, 1000);
+            }, 5000);
         }
-        
-        function createEnvironment() {
-            // Ambient light
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
-            scene.add(ambientLight);
+
+        function updateUI() {
+            scoreEl.textContent = gameState.score;
+            levelEl.textContent = gameState.level;
+            focusEl.textContent = Math.max(0, gameState.focus) + '%';
+            timerEl.textContent = gameState.timeLeft + 's';
             
-            // Point lights
-            const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xf9ca24, 0x6c5ce7];
-            for (let i = 0; i < 5; i++) {
-                const light = new THREE.PointLight(colors[i], 0.8, 20);
-                light.position.set(
-                    Math.cos(i * Math.PI * 2 / 5) * 8,
-                    2 + Math.sin(i * 0.5) * 2,
-                    Math.sin(i * Math.PI * 2 / 5) * 8
-                );
-                scene.add(light);
-            }
-            
-            // Starfield background
-            createStarfield();
-            
-            // Floating platform
-            const platformGeometry = new THREE.CylinderGeometry(8, 8, 0.2, 32);
-            const platformMaterial = new THREE.MeshLambertMaterial({ 
-                color: 0x2c3e50,
-                transparent: true,
-                opacity: 0.7
-            });
-            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-            platform.position.y = -2;
-            scene.add(platform);
-        }
-        
-        function createStarfield() {
-            const starsGeometry = new THREE.BufferGeometry();
-            const starsMaterial = new THREE.PointsMaterial({
-                color: 0xffffff,
-                size: 2,
-                transparent: true,
-                opacity: 0.8
-            });
-            
-            const starsVertices = [];
-            for (let i = 0; i < 1000; i++) {
-                const x = (Math.random() - 0.5) * 200;
-                const y = (Math.random() - 0.5) * 200;
-                const z = (Math.random() - 0.5) * 200;
-                starsVertices.push(x, y, z);
-            }
-            
-            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-            const starField = new THREE.Points(starsGeometry, starsMaterial);
-            scene.add(starField);
-        }
-        
-        function createSphere(x, y, z) {
-            const geometry = new THREE.SphereGeometry(0.3, 32, 32);
-            const material = new THREE.MeshPhongMaterial({
-                color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6),
-                shininess: 100,
-                transparent: true,
-                opacity: 0.9
-            });
-            
-            const sphere = new THREE.Mesh(geometry, material);
-            sphere.position.set(x, y, z);
-            sphere.userData = {
-                gazeTime: 0,
-                collected: false,
-                originalScale: 1,
-                pulsePhase: Math.random() * Math.PI * 2
-            };
-            
-            // Add glow effect
-            const glowGeometry = new THREE.SphereGeometry(0.35, 16, 16);
-            const glowMaterial = new THREE.MeshBasicMaterial({
-                color: material.color.clone().multiplyScalar(0.5),
-                transparent: true,
-                opacity: 0.3
-            });
-            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-            sphere.add(glow);
-            
-            scene.add(sphere);
-            spheres.push(sphere);
-        }
-        
-        function spawnSpheres() {
-            // Clear existing spheres
-            spheres.forEach(sphere => scene.remove(sphere));
-            spheres = [];
-            
-            // Create new spheres
-            const count = Math.min(SPHERE_COUNT + Math.floor(level / 3), 12);
-            for (let i = 0; i < count; i++) {
-                const angle = (i / count) * Math.PI * 2;
-                const radius = 3 + Math.random() * 4;
-                const height = 0.5 + Math.random() * 2;
-                
-                const x = Math.cos(angle) * radius;
-                const y = height;
-                const z = Math.sin(angle) * radius;
-                
-                createSphere(x, y, z);
-            }
-        }
-        
-        function startGame() {
-            gameStarted = true;
-            document.getElementById('startButton').style.display = 'none';
-            spawnSpheres();
-            
-            // Check for WebXR support
-            if ('xr' in navigator) {
-                navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-                    if (supported) {
-                        // Add VR button
-                        const vrButton = document.createElement('button');
-                        vrButton.textContent = 'Enter VR';
-                        vrButton.style.position = 'absolute';
-                        vrButton.style.top = '20px';
-                        vrButton.style.right = '20px';
-                        vrButton.style.background = 'rgba(0,0,0,0.8)';
-                        vrButton.style.color = 'white';
-                        vrButton.style.border = 'none';
-                        vrButton.style.padding = '10px 20px';
-                        vrButton.style.borderRadius = '5px';
-                        vrButton.style.cursor = 'pointer';
-                        vrButton.addEventListener('click', () => {
-                            navigator.xr.requestSession('immersive-vr').then((session) => {
-                                renderer.xr.setSession(session);
-                                xrSession = session;
-                            });
-                        });
-                        document.body.appendChild(vrButton);
-                    }
-                });
-            }
-        }
-        
-        function updateGaze() {
-            if (!gameStarted) return;
-            
-            // Get center of screen for gaze ray
-            const centerX = 0;
-            const centerY = 0;
-            
-            // Cast ray from camera center
-            raycaster.setFromCamera({ x: centerX, y: centerY }, camera);
-            const intersects = raycaster.intersectObjects(spheres);
-            
-            if (intersects.length > 0) {
-                const sphere = intersects[0].object;
-                if (!sphere.userData.collected) {
-                    sphere.userData.gazeTime += 16; // ~60fps
-                    
-                    // Visual feedback
-                    const progress = sphere.userData.gazeTime / GAZE_TIME;
-                    sphere.scale.setScalar(1 + progress * 0.3);
-                    sphere.material.opacity = 0.9 + progress * 0.1;
-                    
-                    // Collect sphere
-                    if (sphere.userData.gazeTime >= GAZE_TIME) {
-                        collectSphere(sphere);
-                    }
-                }
+            // Update focus color
+            if (gameState.focus > 70) {
+                focusEl.style.color = '#00ff00';
+            } else if (gameState.focus > 30) {
+                focusEl.style.color = '#ffff00';
             } else {
-                // Reset gaze time for all spheres
-                spheres.forEach(sphere => {
-                    if (!sphere.userData.collected) {
-                        sphere.userData.gazeTime = Math.max(0, sphere.userData.gazeTime - 32);
-                        const progress = sphere.userData.gazeTime / GAZE_TIME;
-                        sphere.scale.setScalar(1 + progress * 0.3);
-                        sphere.material.opacity = 0.9 + progress * 0.1;
-                    }
-                });
+                focusEl.style.color = '#ff0000';
             }
         }
-        
-        function collectSphere(sphere) {
-            sphere.userData.collected = true;
-            score++;
+
+        function spawnCollectible() {
+            if (!gameState.gameActive) return;
             
-            // Create particle explosion
-            createParticleExplosion(sphere.position);
+            const currentObjects = gameObjects.children.length;
+            if (currentObjects >= gameState.maxObjects) return;
+
+            const collectible = document.createElement('a-entity');
+            collectible.setAttribute('mixin', 'collectible');
             
-            // Remove sphere with animation
-            const tween = {
-                scale: 1,
-                opacity: 0.9
-            };
+            // Random position around the player
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 3 + Math.random() * 4;
+            const height = 0.5 + Math.random() * 3;
             
-            const animate = () => {
-                tween.scale += 0.1;
-                tween.opacity -= 0.05;
-                sphere.scale.setScalar(tween.scale);
-                sphere.material.opacity = tween.opacity;
-                
-                if (tween.opacity > 0) {
-                    requestAnimationFrame(animate);
-                } else {
-                    scene.remove(sphere);
-                    spheres = spheres.filter(s => s !== sphere);
+            const x = Math.sin(angle) * distance;
+            const z = Math.cos(angle) * distance;
+            
+            collectible.setAttribute('position', `${x} ${height} ${z}`);
+            collectible.setAttribute('id', `collectible-${Date.now()}`);
+            
+            // Add click/gaze event
+            collectible.addEventListener('click', handleCollect);
+            collectible.addEventListener('fuse', handleCollect);
+            
+            gameObjects.appendChild(collectible);
+            
+            // Remove after lifetime expires
+            setTimeout(() => {
+                if (collectible.parentNode) {
+                    handleMiss(collectible);
                 }
-            };
-            animate();
+            }, gameState.objectLifetime);
+        }
+
+        function handleCollect(event) {
+            const collectible = event.target;
             
-            // Update UI
-            document.getElementById('score').textContent = `Score: ${score}`;
+            // Update game state
+            gameState.score += 10 * gameState.level;
+            gameState.objectsCollected++;
+            gameState.focus = Math.min(100, gameState.focus + 2);
+            
+            // Create collection effect
+            createCollectionEffect(collectible.getAttribute('position'));
+            
+            // Play sound
+            const sound = document.querySelector('#collectSound');
+            sound.components.sound.playSound();
+            
+            // Remove object
+            collectible.parentNode.removeChild(collectible);
             
             // Check for level up
-            if (score > 0 && score % LEVEL_THRESHOLD === 0) {
-                level++;
-                document.getElementById('level').textContent = `Level ${level}`;
-                setTimeout(() => spawnSpheres(), 1000);
+            if (gameState.objectsCollected % 10 === 0) {
+                levelUp();
             }
             
-            // Spawn new spheres if all collected
-            if (spheres.filter(s => !s.userData.collected).length === 0) {
-                setTimeout(() => spawnSpheres(), 500);
+            updateUI();
+        }
+
+        function handleMiss(collectible) {
+            if (!collectible.parentNode) return;
+            
+            // Update game state
+            gameState.objectsMissed++;
+            gameState.focus = Math.max(0, gameState.focus - 5);
+            
+            // Play miss sound
+            const sound = document.querySelector('#missSound');
+            sound.components.sound.playSound();
+            
+            // Remove object
+            collectible.parentNode.removeChild(collectible);
+            
+            updateUI();
+            
+            // Check game over
+            if (gameState.focus <= 0) {
+                gameOver();
             }
         }
-        
-        function createParticleExplosion(position) {
-            const particleCount = 20;
-            for (let i = 0; i < particleCount; i++) {
-                const particle = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.02, 8, 8),
-                    new THREE.MeshBasicMaterial({
-                        color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6)
-                    })
-                );
-                
-                particle.position.copy(position);
-                particle.userData = {
-                    velocity: new THREE.Vector3(
-                        (Math.random() - 0.5) * 0.2,
-                        Math.random() * 0.2,
-                        (Math.random() - 0.5) * 0.2
-                    ),
-                    life: 1.0
-                };
-                
-                scene.add(particle);
-                particles.push(particle);
-            }
-        }
-        
-        function updateParticles() {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const particle = particles[i];
-                particle.position.add(particle.userData.velocity);
-                particle.userData.velocity.y -= 0.01; // gravity
-                particle.userData.life -= 0.02;
-                particle.material.opacity = particle.userData.life;
-                
-                if (particle.userData.life <= 0) {
-                    scene.remove(particle);
-                    particles.splice(i, 1);
-                }
-            }
-        }
-        
-        function onMouseMove(event) {
-            // Update gaze cursor position
-            gazeCursor.style.left = event.clientX + 'px';
-            gazeCursor.style.top = event.clientY + 'px';
-        }
-        
-        function onTouchMove(event) {
-            if (event.touches.length > 0) {
-                gazeCursor.style.left = event.touches[0].clientX + 'px';
-                gazeCursor.style.top = event.touches[0].clientY + 'px';
-            }
-        }
-        
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        function animate(time) {
-            // Update sphere animations
-            spheres.forEach((sphere, index) => {
-                if (!sphere.userData.collected) {
-                    sphere.userData.pulsePhase += 0.05;
-                    const pulse = Math.sin(sphere.userData.pulsePhase) * 0.1 + 1;
-                    sphere.children[0].scale.setScalar(pulse); // glow effect
-                    
-                    // Gentle floating motion
-                    sphere.position.y += Math.sin(time * 0.001 + index) * 0.002;
-                    sphere.rotation.y += 0.01;
-                }
+
+        function createCollectionEffect(position) {
+            const effect = document.createElement('a-entity');
+            effect.setAttribute('position', position);
+            effect.setAttribute('particle-system', {
+                preset: 'dust',
+                particleCount: 50,
+                color: '#00ffff, #ffffff',
+                size: 0.1,
+                accelerationValue: '0, 5, 0',
+                velocityValue: '0, 2, 0',
+                velocitySpread: '2, 1, 2'
             });
             
-            updateGaze();
-            updateParticles();
+            particles.appendChild(effect);
             
-            renderer.render(scene, camera);
+            // Remove after animation
+            setTimeout(() => {
+                if (effect.parentNode) {
+                    particles.removeChild(effect);
+                }
+            }, 2000);
         }
-        
-        // Start the game
-        init();
+
+        function levelUp() {
+            gameState.level++;
+            gameState.spawnRate = Math.max(1000, gameState.spawnRate - 200);
+            gameState.maxObjects = Math.min(5, gameState.maxObjects + 1);
+            gameState.objectLifetime = Math.max(4000, gameState.objectLifetime - 500);
+            
+            // Show level up effect
+            showMessage(`Level ${gameState.level}!`, '#00ff00');
+        }
+
+        function showMessage(text, color) {
+            const message = document.createElement('div');
+            message.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: ${color};
+                font-size: 48px;
+                font-weight: bold;
+                text-shadow: 0 0 20px ${color};
+                z-index: 1000;
+                animation: messageAnim 2s ease-out forwards;
+            `;
+            message.textContent = text;
+            document.body.appendChild(message);
+            
+            // Add CSS animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes messageAnim {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            setTimeout(() => {
+                document.body.removeChild(message);
+                document.head.removeChild(style);
+            }, 2000);
+        }
+
+        function gameOver() {
+            gameState.gameActive = false;
+            
+            // Clear all objects
+            while (gameObjects.firstChild) {
+                gameObjects.removeChild(gameObjects.firstChild);
+            }
+            
+            showMessage(`Game Over! Final Score: ${gameState.score}`, '#ff0000');
+            
+            // Show restart option
+            setTimeout(() => {
+                if (confirm(`Game Over!\n\nFinal Score: ${gameState.score}\nLevel Reached: ${gameState.level}\n\nRestart game?`)) {
+                    restartGame();
+                }
+            }, 3000);
+        }
+
+        function restartGame() {
+            // Reset game state
+            gameState = {
+                score: 0,
+                level: 1,
+                focus: 100,
+                timeLeft: 60,
+                gameActive: true,
+                objectsCollected: 0,
+                objectsMissed: 0,
+                spawnRate: 3000,
+                objectLifetime: 8000,
+                maxObjects: 3
+            };
+            
+            // Clear objects
+            while (gameObjects.firstChild) {
+                gameObjects.removeChild(gameObjects.firstChild);
+            }
+            
+            updateUI();
+            startGameLoop();
+        }
+
+        function startGameLoop() {
+            if (!gameState.gameActive) return;
+            
+            // Spawn objects
+            const spawnInterval = setInterval(() => {
+                if (gameState.gameActive) {
+                    spawnCollectible();
+                } else {
+                    clearInterval(spawnInterval);
+                }
+            }, gameState.spawnRate);
+            
+            // Game timer
+            const timerInterval = setInterval(() => {
+                if (gameState.gameActive) {
+                    gameState.timeLeft--;
+                    updateUI();
+                    
+                    if (gameState.timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        gameOver();
+                    }
+                } else {
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        // Touch/click handling for mobile
+        document.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
-</html>
+    </html>
