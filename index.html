@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
@@ -8,90 +7,77 @@
   <script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
   <style>
     html,body{height:100%;margin:0;background:#030911;color:#fff;font-family:system-ui}
-    #hud{position:fixed;left:12px;top:12px;z-index:11;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.6);font-size:13px;background:rgba(0,0,0,0.38);padding:8px 10px;border-radius:8px}
+    #hud{position:fixed;left:12px;top:12px;z-index:11;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.6);font-size:13px;background:rgba(0,0,0,0.38);padding:8px 10px;border-radius:8px;display:flex;align-items:center;gap:8px}
+    #hud button{padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:#0e2a3e;color:#cfe9ff;cursor:pointer;font-weight:700;font-size:11px}
     #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,.65);padding:8px 12px;border-radius:10px;display:none;z-index:12;font-size:13px}
-    #menuOverlay{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;background:rgba(10,12,18,0.95);padding:18px;border-radius:14px;color:#fff;width:320px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+    /* Show menu by default so user can set timers BEFORE starting */
+    #menuOverlay{display:block;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;background:rgba(10,12,18,0.95);padding:18px;border-radius:14px;color:#fff;width:320px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
     #menuOverlay h3{margin:0 0 8px 0}
     #menuOverlay label{font-size:13px}
     #menuOverlay input{width:100%;padding:8px;margin-top:6px;margin-bottom:10px;border-radius:6px;border:1px solid #333;background:#0f1520;color:#fff}
-    #menuOverlay .row{display:flex;gap:8px}
+    #menuOverlay .row{display:flex;gap:8px;flex-wrap:wrap}
     #menuOverlay button{padding:10px;border-radius:8px;border:none;background:#1f9cff;color:#fff;cursor:pointer}
   </style>
 </head>
 <body>
-  <div id="hud">Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s</div>
-  <div id="toast"></div>
-
-  <!-- Settings overlay -->
-  <div id="menuOverlay" role="dialog" aria-hidden="true">
+  <div id="hud">Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s <button id="openMenuBtn" title="Open settings">Settings</button></div>
+  <div id="toast"></div>  <!-- Settings overlay (now includes a Start button) -->  <div id="menuOverlay" role="dialog" aria-hidden="false">
     <h3>Game Settings</h3>
     <label>Orb gaze time (ms)</label>
     <input id="orbGazeInput" type="number" min="50" step="50" value="150">
     <label>Danger gaze time (ms)</label>
     <input id="dangerGazeInput" type="number" min="50" step="50" value="500">
     <div class="row">
-      <button id="saveSettings">Save & Close</button>
+      <button id="startGameBtn">Start Game</button>
+      <button id="saveSettings">Save</button>
       <button id="restartBtn">Restart</button>
     </div>
-    <div class="row" style="margin-top:6px;">
-    <button id="startGameBtn">Start Game</button>
-    </div>
-  </div>
-
-  <a-scene renderer="antialias:true" background="color:#030911">
+  </div>  <a-scene renderer="antialias:true" background="color:#030911">
     <a-assets>
       <audio id="collectSound" src="https://cdn.aframe.io/basic-guide/audio/click.ogg"></audio>
       <audio id="dangerSound" src="https://cdn.aframe.io/basic-guide/audio/explosion.ogg"></audio>
-    </a-assets>
+    </a-assets><!-- Starry environment (kept) -->
+<a-entity environment="preset: starry; skyType: atmosphere; groundColor: #0a1a2a; groundTexture: walkernoise; ground: canyon; fog: 0.08; lightPosition: 0 8 -3; dressing: stones; dressingAmount: 10; dressingColor: #223a57"></a-entity>
 
-    <!-- Starry environment -->
-    <a-entity environment="preset: starry; skyType: atmosphere; groundColor: #0a1a2a; groundTexture: walkernoise; ground: canyon; fog: 0.08; lightPosition: 0 8 -3; dressing: stones; dressingAmount: 10; dressingColor: #223a57"></a-entity>
-
-    <!-- Camera rig -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls>
-        <!-- Reticle -->
-        <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
-        <!-- Raycaster -->
-        <a-entity id="ray" raycaster="objects: .interactable; interval: 40" position="0 0 0"></a-entity>
-        <!-- HUD in VR -->
-        <a-entity position="-0.42 0.32 -1">
-          <a-plane width="0.36" height="0.14" color="#000" material="opacity:0.35"></a-plane>
-          <a-text id="vrScore" value="Score: 0" color="#fff" position="-0.16 -0.02 0.01" width="1.2"></a-text>
-        </a-entity>
-      </a-entity>
+<!-- Camera rig -->
+<a-entity id="rig" position="0 1.6 0">
+  <a-entity id="camera" camera look-controls>
+    <!-- Reticle -->
+    <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
+    <!-- Raycaster -->
+    <a-entity id="ray" raycaster="objects: .interactable; interval: 40" position="0 0 0"></a-entity>
+    <!-- HUD in VR -->
+    <a-entity position="-0.42 0.32 -1">
+      <a-plane width="0.36" height="0.14" color="#000" material="opacity:0.35"></a-plane>
+      <a-text id="vrScore" value="Score: 0" color="#fff" position="-0.16 -0.02 0.01" width="1.2"></a-text>
     </a-entity>
+  </a-entity>
+</a-entity>
 
-    <!-- Spawners -->
-    <a-entity id="collect-spawner"></a-entity>
-    <a-entity id="danger-spawner"></a-entity>
+<!-- Spawners -->
+<a-entity id="collect-spawner"></a-entity>
+<a-entity id="danger-spawner"></a-entity>
 
-    <!-- Game over panel -->
-    <a-entity id="gameOverPanel" visible="false">
-      <a-entity position="0 1.4 -1.2">
-        <a-plane width="1.0" height="0.5" color="#200" material="opacity:0.95"></a-plane>
-        <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01"></a-text>
-      </a-entity>
-    </a-entity>
+<!-- Game over panel -->
+<a-entity id="gameOverPanel" visible="false">
+  <a-entity position="0 1.4 -1.2">
+    <a-plane width="1.0" height="0.5" color="#200" material="opacity:0.95"></a-plane>
+    <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01"></a-text>
+  </a-entity>
+</a-entity>
 
-  </a-scene>
-
-  <script>
+  </a-scene>  <script>
+    // ---------------- State & refs ----------------
     const state = {
-      running: true,
-      paused: false,
+      running: false,    // do not auto-start
+      paused: true,
       score: 0,
-      orbGazeMs: 15,
-      dangerGazeMs: 5,
+      orbGazeMs: 150,
+      dangerGazeMs: 500,
       timers: new Map(),
-      TOTAL_ORBS: 30,
-      TOTAL_DANGER: 45,
-      spawnedOrbs: 0,
-      spawnedDanger: 0,
-      orbInterval: null,
-      dangerInterval: null,
-      roundTime: 120,
-      roundTimer: null
+      roundTime: 60,
+      roundTimer: null,
+      intervals: { orb:null, danger:null },
     };
 
     const scoreVal = document.getElementById('scoreVal');
@@ -101,6 +87,10 @@
     const orbInput = document.getElementById('orbGazeInput');
     const dangerInput = document.getElementById('dangerGazeInput');
     const vrScore = document.getElementById('vrScore');
+    const startBtn = document.getElementById('startGameBtn');
+    const saveBtn = document.getElementById('saveSettings');
+    const restartBtnHtml = document.getElementById('restartBtn');
+    const openMenuBtn = document.getElementById('openMenuBtn');
 
     function showToast(msg, ms=1200){ toast.textContent=msg; toast.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.display='none', ms); }
     function setScore(v){ state.score=v; scoreVal.textContent=v; if(vrScore) vrScore.setAttribute('value', `Score: ${v}`); }
@@ -140,30 +130,28 @@
       dangerSpawner.appendChild(bad);
     }
 
-    function startStaggeredSpawns(){
-      if(state.orbInterval) clearInterval(state.orbInterval);
-      if(state.dangerInterval) clearInterval(state.dangerInterval);
-      state.spawnedOrbs = 0; state.spawnedDanger = 0;
-      state.orbInterval = setInterval(()=>{
-        if(state.spawnedOrbs < state.TOTAL_ORBS){ spawnOrb(); state.spawnedOrbs++; }
-        else clearInterval(state.orbInterval);
-      }, 150);
-      state.dangerInterval = setInterval(()=>{
-        if(state.spawnedDanger < state.TOTAL_DANGER){ spawnDanger(); state.spawnedDanger++; }
-        else clearInterval(state.dangerInterval);
-      }, 450);
-    } 
-    const MAX_ORBS_ON_SCREEN = 30;
-    const MAX_DANGER_ON_SCREEN = 45;
+    // ---------------- Continuous spawns (start/stop) ----------------
+    const MAX_ORBS_ON_SCREEN = 10;
+    const MAX_DANGER_ON_SCREEN = 5;
 
-    setInterval(()=>{ 
-      if(collectSpawner.children.length < MAX_ORBS_ON_SCREEN) spawnOrb();
-    }, 800); // tries to spawn an orb every 0.8s
+    function startContinuousSpawns(){
+      stopContinuousSpawns();
+      state.intervals.orb = setInterval(()=>{
+        if(!state.running || state.paused) return;
+        if(collectSpawner.children.length < MAX_ORBS_ON_SCREEN) spawnOrb();
+      }, 800);
+      state.intervals.danger = setInterval(()=>{
+        if(!state.running || state.paused) return;
+        if(dangerSpawner.children.length < MAX_DANGER_ON_SCREEN) spawnDanger();
+      }, 2000);
+    }
+    function stopContinuousSpawns(){
+      if(state.intervals.orb) clearInterval(state.intervals.orb);
+      if(state.intervals.danger) clearInterval(state.intervals.danger);
+      state.intervals.orb = state.intervals.danger = null;
+    }
 
-   setInterval(()=>{
-     if(dangerSpawner.children.length < MAX_DANGER_ON_SCREEN) spawnDanger();
-   }, 2000); // tries to spawn danger every 2s
-
+    // ---------------- Gaze logic ----------------
     const ray = document.getElementById('ray');
     const reticle = document.getElementById('reticle');
     let hovered = null;
@@ -183,8 +171,9 @@
       reticle.setAttribute('scale','1.6 1.6 1');
 
       if(!state.running || state.paused) return;
-      const ms = kind==='collect' ? parseInt(orbInput.value) || state.orbGazeMs
-                            : parseInt(dangerInput.value) || state.dangerGazeMs;
+      // Read LIVE values from inputs each hover
+      const ms = (kind==='collect') ? (parseInt(orbInput.value)||state.orbGazeMs)
+                                    : (parseInt(dangerInput.value)||state.dangerGazeMs);
       const to = setTimeout(()=>{
         if(!state.running || state.paused) return;
         if(kind==='collect'){
@@ -215,23 +204,52 @@
       }
     }
 
-    function openMenu(){ state.paused = true; overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false'); orbInput.value = state.orbGazeMs; dangerInput.value = state.dangerGazeMs; showToast('Menu opened'); }
-    function closeMenuSave(){ state.paused = false; overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs; state.dangerGazeMs = parseInt(dangerInput.value)||state.dangerGazeMs; showToast('Settings saved'); }
-    function triggerGameOver(msg){ state.running=false; state.paused=true; const panel=document.getElementById('gameOverPanel'); document.getElementById('gameOverText').setAttribute('value', msg); panel.setAttribute('visible','true'); showToast('Game Over'); }
-
-    document.getElementById('saveSettings').addEventListener('click', closeMenuSave);
-    document.getElementById('restartBtn').addEventListener('click', ()=>{ restart(); });
-
-    function restart(){
-      state.timers.forEach(t=>clearTimeout(t)); state.timers.clear();
-      Array.from(collectSpawner.children).forEach(c=>c.remove()); Array.from(dangerSpawner.children).forEach(d=>d.remove());
-      setScore(0); state.running=true; state.paused=false; document.getElementById('gameOverPanel').setAttribute('visible','false');
-      startStaggeredSpawns(); showToast('Restarted');
-    }
+    // ---------------- Menu / game flow ----------------
+    function openMenu(){ state.paused = true; overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false'); showToast('Menu opened'); }
+    function closeMenuSave(){ state.paused = false; overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true');
+      // store defaults too (used when inputs are invalid)
+      state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs;
+      state.dangerGazeMs = parseInt(dangerInput.value)||state.dangerGazeMs;
+      showToast('Settings saved'); }
 
     function startRound(){ clearInterval(state.roundTimer); state.roundTime = 60; timeVal.textContent = state.roundTime; state.roundTimer = setInterval(()=>{ if(!state.running || state.paused) return; state.roundTime -= 1; timeVal.textContent = state.roundTime; if(state.roundTime<=0){ clearInterval(state.roundTimer); triggerGameOver("Time's up"); } }, 1000); }
 
-    setScore(0); startRound(); startStaggeredSpawns();
-  </script>
-</body>
+    function startGame(){
+      // Hide menu and begin
+      closeMenuSave();
+      state.running = true; state.paused = false; setScore(0);
+      // seed a few objects immediately
+      for(let i=0;i<6;i++) spawnOrb();
+      for(let i=0;i<3;i++) spawnDanger();
+      // then keep spawning
+      startContinuousSpawns();
+      startRound();
+      showToast('Game Started!');
+    }
+
+    function triggerGameOver(msg){
+      state.running=false; state.paused=true; stopContinuousSpawns();
+      const panel=document.getElementById('gameOverPanel'); document.getElementById('gameOverText').setAttribute('value', msg);
+      panel.setAttribute('visible','true'); showToast('Game Over');
+    }
+
+    function restart(){
+      // clear timers & objects
+      state.timers.forEach(t=>clearTimeout(t)); state.timers.clear();
+      Array.from(collectSpawner.children).forEach(c=>c.remove()); Array.from(dangerSpawner.children).forEach(d=>d.remove());
+      document.getElementById('gameOverPanel').setAttribute('visible','false');
+      startGame();
+    }
+
+    // UI wiring
+    startBtn.addEventListener('click', startGame);
+    saveBtn.addEventListener('click', closeMenuSave);
+    restartBtnHtml.addEventListener('click', ()=>{ restart(); });
+    openMenuBtn.addEventListener('click', ()=>{ openMenu(); });
+    window.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='m') openMenu(); });
+
+    // On load: ensure overlay visible and game idle
+    overlay.style.display='block'; overlay.setAttribute('aria-hidden','false');
+    setScore(0); timeVal.textContent = 60; // no auto start
+  </script></body>
 </html>
