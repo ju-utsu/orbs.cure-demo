@@ -2,414 +2,626 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>FocusXR - Gaze Collection Game</title>
-    <meta name="description" content="Futuristic WebXR game to boost focus and reflexes">
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/supermedium/superframe@master/components/environment/dist/aframe-environment-component.min.js"></script>
+    <title>FocusVR - Futuristic Gaze Collection Game</title>
+    <meta name="description" content="A beautiful futuristic AR/VR game for focus and reflex training">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.0/aframe.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.4.0/aframe-ar.min.js"></script>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
             margin: 0;
-            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e, #16213e);
+            overflow: hidden;
         }
-        
-        #ui {
+
+        .ui-overlay {
             position: fixed;
             top: 20px;
             left: 20px;
-            right: 20px;
-            z-index: 999;
+            z-index: 1000;
             color: #00ffff;
-            font-size: 18px;
+            font-weight: bold;
             text-shadow: 0 0 10px #00ffff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        #instructions {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            z-index: 999;
-            color: #fff;
-            text-align: center;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             padding: 15px;
             border-radius: 10px;
-            border: 1px solid #00ffff;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
         }
-        
-        .glow {
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            color: white;
+            padding: 15px 25px;
+            margin: 5px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .instructions {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ffff;
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .glow-text {
             text-shadow: 0 0 10px currentColor;
         }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <div>
-            <div class="glow">Score: <span id="score">0</span></div>
-            <div class="glow">Level: <span id="level">1</span></div>
-        </div>
-        <div>
-            <div class="glow">Focus: <span id="focus">100%</span></div>
-            <div class="glow">Time: <span id="timer">60s</span></div>
-        </div>
-    </div>
-    
-    <div id="instructions">
-        <h3 style="margin-top:0; color: #00ffff;">🎯 FocusXR Training</h3>
-        <p>Look at the glowing orbs to collect them. Stay focused - missing targets reduces your focus meter!</p>
-        <p><strong>VR/AR:</strong> Use your gaze cursor | <strong>Desktop:</strong> Move mouse to aim</p>
+    <!-- UI Overlay -->
+    <div class="ui-overlay">
+        <div>Score: <span id="score" class="glow-text">0</span></div>
+        <div>Level: <span id="level" class="glow-text">1</span></div>
+        <div>Time: <span id="timer" class="glow-text">60</span>s</div>
+        <div>Focus Streak: <span id="streak" class="glow-text">0</span></div>
     </div>
 
+    <!-- Instructions -->
+    <div id="instructions" class="instructions">
+        <h2 class="glow-text">🎯 FocusVR</h2>
+        <p>Train your focus and reflexes!</p>
+        <p><strong>How to play:</strong></p>
+        <p>👁️ Look at glowing orbs to collect them</p>
+        <p>⚡ Higher levels = faster spawning</p>
+        <p>🎯 Build focus streaks for bonus points</p>
+        <p>🥽 Works in both AR and VR modes</p>
+        <button class="btn" onclick="startGame()">Start Training</button>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="btn" onclick="toggleAR()">📱 AR Mode</button>
+        <button class="btn" onclick="toggleVR()">🥽 VR Mode</button>
+        <button class="btn" onclick="resetGame()">🔄 Reset</button>
+    </div>
+
+    <!-- A-Frame Scene -->
     <a-scene 
-        vr-mode-ui="enabled: true" 
-        ar-mode-ui="enabled: true"
-        background="color: #0f0f23"
-        fog="type: exponential; density: 0.1; color: #0f0f23"
-        cursor="rayOrigin: mouse; fuse: true; fuseTimeout: 1000"
-        raycaster="objects: .collectible"
-        embedded
-        style="height: 100vh; width: 100vw;">
+        id="scene"
+        embedded 
+        style="height: 100vh; width: 100vw;"
+        background="color: #0a0a0a"
+        fog="type: exponential; color: #0a0a0a; density: 0.1"
+        vr-mode-ui="enabled: true"
+        device-orientation-permission-ui="enabled: false">
         
         <!-- Assets -->
         <a-assets>
-            <a-mixin id="collectible" 
-                geometry="primitive: sphere; radius: 0.3" 
-                material="color: #00ffff; emissive: #004444; transparent: true; opacity: 0.8"
-                animation__float="property: position; to: 0 0.5 0; dur: 2000; dir: alternate; loop: true; easing: easeInOutSine"
-                animation__glow="property: components.material.material.emissiveIntensity; to: 0.8; dur: 1000; dir: alternate; loop: true"
-                class="collectible">
-            </a-mixin>
-            
-            <a-mixin id="particle-system"
-                particle-system="preset: dust; particleCount: 100; color: #00ffff, #0066ff; size: 0.5">
+            <a-mixin id="orb-animation" 
+                animation__rotate="property: rotation; to: 0 360 0; loop: true; dur: 3000; easing: linear"
+                animation__float="property: position; to: 0 0.5 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine">
             </a-mixin>
         </a-assets>
 
-        <!-- Environment -->
-        <a-entity environment="preset: tron; grid: 2x2; gridColor: #00ffff; groundColor: #0f0f23; skyType: atmosphere; skyColor: #0f0f23"></a-entity>
-        
-        <!-- Lighting -->
-        <a-light type="ambient" color="#002244" intensity="0.3"></a-light>
-        <a-light type="directional" position="5 10 5" color="#00ffff" intensity="0.5"></a-light>
-        
         <!-- Camera with cursor -->
-        <a-entity id="cameraRig" position="0 1.6 3">
-            <a-camera 
-                look-controls="pointerLockEnabled: false"
-                wasd-controls="acceleration: 20"
-                cursor="fuse: true; fuseTimeout: 1500">
+        <a-entity id="cameraRig">
+            <a-camera id="camera" 
+                look-controls="enabled: true" 
+                wasd-controls="enabled: false"
+                position="0 1.6 0">
                 
-                <!-- VR/AR Cursor -->
-                <a-cursor 
-                    position="0 0 -1"
-                    geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
-                    material="color: #00ffff; emissive: #00ffff; emissiveIntensity: 0.5"
-                    animation__fuse="startEvents: fusing; property: scale; to: 1.5 1.5 1.5; dur: 1500"
-                    animation__fusereverse="startEvents: mouseleave; property: scale; to: 1 1 1; dur: 100">
-                </a-cursor>
+                <!-- Gaze cursor -->
+                <a-ring id="cursor" 
+                    position="0 0 -2" 
+                    radius-inner="0.01" 
+                    radius-outer="0.02" 
+                    color="#00ffff" 
+                    opacity="0.8"
+                    animation__pulse="property: scale; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 1000">
+                    
+                    <!-- Gaze progress ring -->
+                    <a-ring id="gazeProgress"
+                        radius-inner="0.015"
+                        radius-outer="0.025"
+                        color="#ff6b6b"
+                        opacity="0"
+                        theta-start="0"
+                        theta-length="0">
+                    </a-ring>
+                </a-ring>
             </a-camera>
         </a-entity>
 
-        <!-- Game Objects Container -->
-        <a-entity id="gameObjects"></a-entity>
-        
-        <!-- Particle Effects Container -->
+        <!-- Lighting -->
+        <a-light type="ambient" color="#001122" intensity="0.3"></a-light>
+        <a-light type="directional" color="#0066ff" intensity="0.5" position="2 4 2"></a-light>
+        <a-light type="point" color="#ff00ff" intensity="0.8" position="-2 2 -2"></a-light>
+
+        <!-- Futuristic environment -->
+        <a-plane id="ground" 
+            position="0 0 0" 
+            rotation="-90 0 0" 
+            width="20" 
+            height="20" 
+            color="#001122" 
+            opacity="0.8"
+            material="transparent: true">
+        </a-plane>
+
+        <!-- Grid overlay for futuristic look -->
+        <a-entity id="grid-lines"></a-entity>
+
+        <!-- Particle system container -->
         <a-entity id="particles"></a-entity>
-        
-        <!-- Sound Effects -->
-        <a-entity id="sounds">
-            <a-sound id="collectSound" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhCSuEzvLWgC4kMIHL8ttwIBw9ibVnhKFhI3L5nD6RjQNZBsU7pKe1HBIgRUL8hBmGFxcQKZxKWxPqBIKHaA==" autoplay="false" loop="false" volume="0.5"></a-sound>
-            <a-sound id="missSound" src="data:audio/wav;base64,UklGRp4CAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YXoCAAC4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4" autoplay="false" loop="false" volume="0.3"></a-sound>
-        </a-entity>
+
+        <!-- Collectible orbs container -->
+        <a-entity id="orbs"></a-entity>
+
     </a-scene>
 
     <script>
-        // Game State
+        // Game state
         let gameState = {
             score: 0,
             level: 1,
-            focus: 100,
             timeLeft: 60,
-            gameActive: true,
-            objectsCollected: 0,
-            objectsMissed: 0,
-            spawnRate: 3000, // ms between spawns
-            objectLifetime: 8000, // how long objects stay alive
-            maxObjects: 3
+            streak: 0,
+            gameActive: false,
+            spawnRate: 3000,
+            orbsCollected: 0,
+            totalOrbs: 0
         };
 
-        // Game Elements
-        const scene = document.querySelector('a-scene');
-        const gameObjects = document.querySelector('#gameObjects');
-        const particles = document.querySelector('#particles');
-        
-        // UI Elements
-        const scoreEl = document.getElementById('score');
-        const levelEl = document.getElementById('level');
-        const focusEl = document.getElementById('focus');
-        const timerEl = document.getElementById('timer');
-        const instructionsEl = document.getElementById('instructions');
+        let gameTimer;
+        let spawnTimer;
+        let orbId = 0;
+        let currentGazeTarget = null;
+        let gazeStartTime = null;
+        const GAZE_TIME = 1500; // ms to collect orb
 
-        // Initialize game when scene loads
-        scene.addEventListener('loaded', initGame);
-
-        function initGame() {
-            console.log('Game initialized!');
-            updateUI();
-            startGameLoop();
-            
-            // Hide instructions after 5 seconds
-            setTimeout(() => {
-                instructionsEl.style.opacity = '0';
-                setTimeout(() => {
-                    instructionsEl.style.display = 'none';
-                }, 1000);
-            }, 5000);
+        // Initialize the game
+        function init() {
+            createGrid();
+            createParticles();
+            setupGazeInteraction();
         }
 
-        function updateUI() {
-            scoreEl.textContent = gameState.score;
-            levelEl.textContent = gameState.level;
-            focusEl.textContent = Math.max(0, gameState.focus) + '%';
-            timerEl.textContent = gameState.timeLeft + 's';
+        // Create futuristic grid
+        function createGrid() {
+            const gridContainer = document.getElementById('grid-lines');
             
-            // Update focus color
-            if (gameState.focus > 70) {
-                focusEl.style.color = '#00ff00';
-            } else if (gameState.focus > 30) {
-                focusEl.style.color = '#ffff00';
-            } else {
-                focusEl.style.color = '#ff0000';
+            // Create grid lines
+            for (let i = -10; i <= 10; i += 2) {
+                // Horizontal lines
+                const hLine = document.createElement('a-box');
+                hLine.setAttribute('position', `${i} 0.01 0`);
+                hLine.setAttribute('scale', '0.05 0.02 20');
+                hLine.setAttribute('color', '#00ffff');
+                hLine.setAttribute('opacity', '0.3');
+                hLine.setAttribute('material', 'transparent: true; emissive: #00ffff; emissiveIntensity: 0.2');
+                gridContainer.appendChild(hLine);
+
+                // Vertical lines
+                const vLine = document.createElement('a-box');
+                vLine.setAttribute('position', `0 0.01 ${i}`);
+                vLine.setAttribute('scale', '20 0.02 0.05');
+                vLine.setAttribute('color', '#00ffff');
+                vLine.setAttribute('opacity', '0.3');
+                vLine.setAttribute('material', 'transparent: true; emissive: #00ffff; emissiveIntensity: 0.2');
+                gridContainer.appendChild(vLine);
             }
         }
 
-        function spawnCollectible() {
-            if (!gameState.gameActive) return;
+        // Create ambient particles
+        function createParticles() {
+            const particleContainer = document.getElementById('particles');
             
-            const currentObjects = gameObjects.children.length;
-            if (currentObjects >= gameState.maxObjects) return;
-
-            const collectible = document.createElement('a-entity');
-            collectible.setAttribute('mixin', 'collectible');
-            
-            // Random position around the player
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 3 + Math.random() * 4;
-            const height = 0.5 + Math.random() * 3;
-            
-            const x = Math.sin(angle) * distance;
-            const z = Math.cos(angle) * distance;
-            
-            collectible.setAttribute('position', `${x} ${height} ${z}`);
-            collectible.setAttribute('id', `collectible-${Date.now()}`);
-            
-            // Add click/gaze event
-            collectible.addEventListener('click', handleCollect);
-            collectible.addEventListener('fuse', handleCollect);
-            
-            gameObjects.appendChild(collectible);
-            
-            // Remove after lifetime expires
-            setTimeout(() => {
-                if (collectible.parentNode) {
-                    handleMiss(collectible);
-                }
-            }, gameState.objectLifetime);
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('a-sphere');
+                particle.setAttribute('radius', '0.02');
+                particle.setAttribute('position', {
+                    x: (Math.random() - 0.5) * 20,
+                    y: Math.random() * 5 + 1,
+                    z: (Math.random() - 0.5) * 20
+                });
+                particle.setAttribute('color', Math.random() > 0.5 ? '#00ffff' : '#ff6b6b');
+                particle.setAttribute('opacity', '0.6');
+                particle.setAttribute('material', 'transparent: true; emissive: currentColor; emissiveIntensity: 0.5');
+                particle.setAttribute('animation', 'property: position; to: ' + 
+                    ((Math.random() - 0.5) * 20) + ' ' + 
+                    (Math.random() * 5 + 1) + ' ' + 
+                    ((Math.random() - 0.5) * 20) + 
+                    '; loop: true; dir: alternate; dur: ' + (Math.random() * 10000 + 5000));
+                particleContainer.appendChild(particle);
+            }
         }
 
-        function handleCollect(event) {
-            const collectible = event.target;
+        // Setup gaze-based interaction
+        function setupGazeInteraction() {
+            const camera = document.getElementById('camera');
+            const cursor = document.getElementById('cursor');
+            const gazeProgress = document.getElementById('gazeProgress');
+
+            // Raycaster for gaze detection
+            camera.setAttribute('raycaster', 'objects: .collectible; far: 20');
             
-            // Update game state
-            gameState.score += 10 * gameState.level;
-            gameState.objectsCollected++;
-            gameState.focus = Math.min(100, gameState.focus + 2);
+            camera.addEventListener('raycaster-intersection', function(evt) {
+                if (!gameState.gameActive) return;
+                
+                const intersectedEl = evt.detail.els[0];
+                if (intersectedEl && intersectedEl.classList.contains('collectible')) {
+                    if (currentGazeTarget !== intersectedEl) {
+                        currentGazeTarget = intersectedEl;
+                        gazeStartTime = Date.now();
+                        startGazeProgress();
+                    }
+                }
+            });
+
+            camera.addEventListener('raycaster-intersection-cleared', function(evt) {
+                resetGaze();
+            });
+        }
+
+        // Start gaze progress animation
+        function startGazeProgress() {
+            const gazeProgress = document.getElementById('gazeProgress');
+            gazeProgress.setAttribute('opacity', '0.8');
+            
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (!currentGazeTarget || !gameState.gameActive) {
+                    clearInterval(progressInterval);
+                    resetGaze();
+                    return;
+                }
+                
+                const elapsed = Date.now() - gazeStartTime;
+                progress = (elapsed / GAZE_TIME) * 360;
+                
+                gazeProgress.setAttribute('theta-length', progress);
+                
+                if (progress >= 360) {
+                    clearInterval(progressInterval);
+                    collectOrb(currentGazeTarget);
+                    resetGaze();
+                }
+            }, 50);
+        }
+
+        // Reset gaze interaction
+        function resetGaze() {
+            currentGazeTarget = null;
+            gazeStartTime = null;
+            const gazeProgress = document.getElementById('gazeProgress');
+            gazeProgress.setAttribute('opacity', '0');
+            gazeProgress.setAttribute('theta-length', '0');
+        }
+
+        // Spawn collectible orb
+        function spawnOrb() {
+            if (!gameState.gameActive) return;
+
+            const orbsContainer = document.getElementById('orbs');
+            const orb = document.createElement('a-sphere');
+            
+            orbId++;
+            orb.id = 'orb-' + orbId;
+            orb.classList.add('collectible');
+            
+            // Random position around player
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 3 + Math.random() * 4;
+            const height = 1 + Math.random() * 2;
+            
+            orb.setAttribute('position', {
+                x: Math.cos(angle) * distance,
+                y: height,
+                z: Math.sin(angle) * distance
+            });
+            
+            orb.setAttribute('radius', '0.15');
+            orb.setAttribute('color', getRandomOrbColor());
+            orb.setAttribute('material', 'transparent: true; emissive: currentColor; emissiveIntensity: 0.8; opacity: 0.9');
+            orb.setAttribute('mixin', 'orb-animation');
+            
+            // Add pulsing glow effect
+            orb.setAttribute('animation__glow', 'property: material.emissiveIntensity; to: 1.2; dir: alternate; loop: true; dur: 1000');
+            
+            // Add sparkle particles around orb
+            addSparkles(orb);
+            
+            orbsContainer.appendChild(orb);
+            gameState.totalOrbs++;
+            
+            // Remove orb after timeout (missed opportunity)
+            setTimeout(() => {
+                if (orb.parentNode) {
+                    orb.parentNode.removeChild(orb);
+                    // Reset streak on missed orb
+                    gameState.streak = 0;
+                    updateUI();
+                }
+            }, 5000 + (gameState.level * 1000));
+        }
+
+        // Add sparkle effects around orb
+        function addSparkles(orb) {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const sparkle = document.createElement('a-sphere');
+                    sparkle.setAttribute('radius', '0.02');
+                    sparkle.setAttribute('color', '#ffffff');
+                    sparkle.setAttribute('opacity', '0.8');
+                    sparkle.setAttribute('material', 'transparent: true; emissive: #ffffff; emissiveIntensity: 1');
+                    
+                    const sparklePos = {
+                        x: (Math.random() - 0.5) * 0.6,
+                        y: (Math.random() - 0.5) * 0.6,
+                        z: (Math.random() - 0.5) * 0.6
+                    };
+                    sparkle.setAttribute('position', sparklePos);
+                    
+                    sparkle.setAttribute('animation', 
+                        'property: opacity; to: 0; dur: 1000; easing: easeOutQuad');
+                    
+                    orb.appendChild(sparkle);
+                    
+                    setTimeout(() => {
+                        if (sparkle.parentNode) {
+                            sparkle.parentNode.removeChild(sparkle);
+                        }
+                    }, 1000);
+                }, i * 200);
+            }
+        }
+
+        // Get random orb color based on level
+        function getRandomOrbColor() {
+            const colors = [
+                '#00ffff', '#ff6b6b', '#4ecdc4', '#45b7d1', 
+                '#96ceb4', '#ffd93d', '#ff8a80', '#b39ddb'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Collect orb
+        function collectOrb(orb) {
+            if (!orb.parentNode) return;
+
+            // Calculate points based on level and streak
+            const basePoints = 10;
+            const levelMultiplier = gameState.level;
+            const streakBonus = gameState.streak * 2;
+            const points = basePoints * levelMultiplier + streakBonus;
+            
+            gameState.score += points;
+            gameState.streak++;
+            gameState.orbsCollected++;
             
             // Create collection effect
-            createCollectionEffect(collectible.getAttribute('position'));
+            createCollectionEffect(orb);
             
-            // Play sound
-            const sound = document.querySelector('#collectSound');
-            sound.components.sound.playSound();
+            // Remove orb
+            orb.parentNode.removeChild(orb);
             
-            // Remove object
-            collectible.parentNode.removeChild(collectible);
-            
-            // Check for level up
-            if (gameState.objectsCollected % 10 === 0) {
+            // Level up every 10 orbs
+            if (gameState.orbsCollected % 10 === 0) {
                 levelUp();
             }
             
             updateUI();
         }
 
-        function handleMiss(collectible) {
-            if (!collectible.parentNode) return;
+        // Create visual effect when orb is collected
+        function createCollectionEffect(orb) {
+            const pos = orb.getAttribute('position');
             
-            // Update game state
-            gameState.objectsMissed++;
-            gameState.focus = Math.max(0, gameState.focus - 5);
-            
-            // Play miss sound
-            const sound = document.querySelector('#missSound');
-            sound.components.sound.playSound();
-            
-            // Remove object
-            collectible.parentNode.removeChild(collectible);
-            
-            updateUI();
-            
-            // Check game over
-            if (gameState.focus <= 0) {
-                gameOver();
+            // Create explosion particles
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('a-sphere');
+                particle.setAttribute('radius', '0.05');
+                particle.setAttribute('position', pos);
+                particle.setAttribute('color', orb.getAttribute('color'));
+                particle.setAttribute('material', 'transparent: true; emissive: currentColor; emissiveIntensity: 1');
+                
+                const direction = {
+                    x: (Math.random() - 0.5) * 4,
+                    y: Math.random() * 2 + 1,
+                    z: (Math.random() - 0.5) * 4
+                };
+                
+                particle.setAttribute('animation__move', 
+                    `property: position; to: ${pos.x + direction.x} ${pos.y + direction.y} ${pos.z + direction.z}; dur: 800; easing: easeOutQuad`);
+                particle.setAttribute('animation__fade', 
+                    'property: opacity; to: 0; dur: 800; easing: easeOutQuad');
+                particle.setAttribute('animation__shrink', 
+                    'property: scale; to: 0.1 0.1 0.1; dur: 800; easing: easeOutQuad');
+                
+                document.getElementById('orbs').appendChild(particle);
+                
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 800);
             }
         }
 
-        function createCollectionEffect(position) {
-            const effect = document.createElement('a-entity');
-            effect.setAttribute('position', position);
-            effect.setAttribute('particle-system', {
-                preset: 'dust',
-                particleCount: 50,
-                color: '#00ffff, #ffffff',
-                size: 0.1,
-                accelerationValue: '0, 5, 0',
-                velocityValue: '0, 2, 0',
-                velocitySpread: '2, 1, 2'
-            });
-            
-            particles.appendChild(effect);
-            
-            // Remove after animation
-            setTimeout(() => {
-                if (effect.parentNode) {
-                    particles.removeChild(effect);
-                }
-            }, 2000);
-        }
-
+        // Level up
         function levelUp() {
             gameState.level++;
-            gameState.spawnRate = Math.max(1000, gameState.spawnRate - 200);
-            gameState.maxObjects = Math.min(5, gameState.maxObjects + 1);
-            gameState.objectLifetime = Math.max(4000, gameState.objectLifetime - 500);
+            gameState.spawnRate = Math.max(1000, gameState.spawnRate - 300);
             
             // Show level up effect
-            showMessage(`Level ${gameState.level}!`, '#00ff00');
+            showLevelUpEffect();
+            
+            // Restart spawning with new rate
+            if (spawnTimer) {
+                clearInterval(spawnTimer);
+            }
+            spawnTimer = setInterval(spawnOrb, gameState.spawnRate);
         }
 
-        function showMessage(text, color) {
-            const message = document.createElement('div');
-            message.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: ${color};
-                font-size: 48px;
-                font-weight: bold;
-                text-shadow: 0 0 20px ${color};
-                z-index: 1000;
-                animation: messageAnim 2s ease-out forwards;
-            `;
-            message.textContent = text;
-            document.body.appendChild(message);
+        // Show level up visual effect
+        function showLevelUpEffect() {
+            // Create temporary level up text in 3D space
+            const levelUpText = document.createElement('a-text');
+            levelUpText.setAttribute('value', `LEVEL ${gameState.level}!`);
+            levelUpText.setAttribute('position', '0 2 -3');
+            levelUpText.setAttribute('align', 'center');
+            levelUpText.setAttribute('color', '#ffff00');
+            levelUpText.setAttribute('scale', '0 0 0');
+            levelUpText.setAttribute('material', 'emissive: #ffff00; emissiveIntensity: 0.8');
             
-            // Add CSS animation
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes messageAnim {
-                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-                    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-                    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
-                }
-            `;
-            document.head.appendChild(style);
+            levelUpText.setAttribute('animation__appear', 
+                'property: scale; to: 3 3 3; dur: 500; easing: easeOutBack');
+            levelUpText.setAttribute('animation__disappear', 
+                'property: opacity; to: 0; dur: 1000; delay: 1000; easing: easeOutQuad');
+            
+            document.getElementById('scene').appendChild(levelUpText);
             
             setTimeout(() => {
-                document.body.removeChild(message);
-                document.head.removeChild(style);
+                if (levelUpText.parentNode) {
+                    levelUpText.parentNode.removeChild(levelUpText);
+                }
             }, 2000);
         }
 
-        function gameOver() {
-            gameState.gameActive = false;
+        // Start game
+        function startGame() {
+            document.getElementById('instructions').classList.add('hidden');
             
-            // Clear all objects
-            while (gameObjects.firstChild) {
-                gameObjects.removeChild(gameObjects.firstChild);
-            }
-            
-            showMessage(`Game Over! Final Score: ${gameState.score}`, '#ff0000');
-            
-            // Show restart option
-            setTimeout(() => {
-                if (confirm(`Game Over!\n\nFinal Score: ${gameState.score}\nLevel Reached: ${gameState.level}\n\nRestart game?`)) {
-                    restartGame();
-                }
-            }, 3000);
-        }
-
-        function restartGame() {
-            // Reset game state
             gameState = {
                 score: 0,
                 level: 1,
-                focus: 100,
                 timeLeft: 60,
+                streak: 0,
                 gameActive: true,
-                objectsCollected: 0,
-                objectsMissed: 0,
                 spawnRate: 3000,
-                objectLifetime: 8000,
-                maxObjects: 3
+                orbsCollected: 0,
+                totalOrbs: 0
             };
             
-            // Clear objects
-            while (gameObjects.firstChild) {
-                gameObjects.removeChild(gameObjects.firstChild);
-            }
-            
             updateUI();
-            startGameLoop();
-        }
-
-        function startGameLoop() {
-            if (!gameState.gameActive) return;
             
-            // Spawn objects
-            const spawnInterval = setInterval(() => {
-                if (gameState.gameActive) {
-                    spawnCollectible();
-                } else {
-                    clearInterval(spawnInterval);
-                }
-            }, gameState.spawnRate);
+            // Start spawning orbs
+            spawnTimer = setInterval(spawnOrb, gameState.spawnRate);
             
-            // Game timer
-            const timerInterval = setInterval(() => {
-                if (gameState.gameActive) {
-                    gameState.timeLeft--;
-                    updateUI();
-                    
-                    if (gameState.timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        gameOver();
-                    }
-                } else {
-                    clearInterval(timerInterval);
+            // Start game timer
+            gameTimer = setInterval(() => {
+                gameState.timeLeft--;
+                updateUI();
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame();
                 }
             }, 1000);
         }
 
-        // Touch/click handling for mobile
-        document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
+        // End game
+        function endGame() {
+            gameState.gameActive = false;
+            clearInterval(gameTimer);
+            clearInterval(spawnTimer);
+            
+            // Clear all orbs
+            const orbsContainer = document.getElementById('orbs');
+            while (orbsContainer.firstChild) {
+                orbsContainer.removeChild(orbsContainer.firstChild);
+            }
+            
+            // Show final score
+            showGameOverScreen();
+        }
+
+        // Show game over screen
+        function showGameOverScreen() {
+            const gameOverText = document.createElement('div');
+            gameOverText.className = 'instructions';
+            gameOverText.innerHTML = `
+                <h2 class="glow-text">🎯 Training Complete!</h2>
+                <p><strong>Final Score:</strong> ${gameState.score}</p>
+                <p><strong>Level Reached:</strong> ${gameState.level}</p>
+                <p><strong>Best Streak:</strong> ${gameState.streak}</p>
+                <p><strong>Orbs Collected:</strong> ${gameState.orbsCollected}</p>
+                <p>${getFeedback()}</p>
+                <button class="btn" onclick="startGame(); this.parentNode.remove();">Train Again</button>
+                <button class="btn" onclick="this.parentNode.remove();">Back to Menu</button>
+            `;
+            document.body.appendChild(gameOverText);
+        }
+
+        // Get performance feedback
+        function getFeedback() {
+            const accuracy = gameState.totalOrbs > 0 ? (gameState.orbsCollected / gameState.totalOrbs * 100).toFixed(1) : 0;
+            
+            if (accuracy >= 90) return "🎉 Exceptional focus! Your concentration is stellar!";
+            if (accuracy >= 75) return "⭐ Great focus! Your reflexes are sharp!";
+            if (accuracy >= 60) return "👍 Good improvement! Keep training!";
+            if (accuracy >= 40) return "📈 Making progress! Focus on sustained attention!";
+            return "🎯 Keep practicing! Every session improves your focus!";
+        }
+
+        // Reset game
+        function resetGame() {
+            endGame();
+            document.getElementById('instructions').classList.remove('hidden');
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('timer').textContent = gameState.timeLeft;
+            document.getElementById('streak').textContent = gameState.streak;
+        }
+
+        // AR/VR mode toggles
+        function toggleAR() {
+            const scene = document.getElementById('scene');
+            if (scene.hasAttribute('arjs')) {
+                scene.removeAttribute('arjs');
+            } else {
+                scene.setAttribute('arjs', 'sourceType: webcam; debugUIEnabled: false;');
+                scene.setAttribute('vr-mode-ui', 'enabled: false');
+            }
+        }
+
+        function toggleVR() {
+            const scene = document.getElementById('scene');
+            scene.removeAttribute('arjs');
+            scene.setAttribute('vr-mode-ui', 'enabled: true');
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+
     </script>
 </body>
     </html>
