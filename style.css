@@ -1,7 +1,7 @@
-html,body { height:100%; margin:0; background:#020417; color:#dff6ff; font-family:system-ui,Segoe UI,Roboto,Arial; }
+/* style.css - UI + overlay styles */
+html,body{height:100%;margin:0;background:#020417;color:#dff6ff;font-family:system-ui,Segoe UI,Roboto,Arial}
 
-/* HUD */
-#hud {
+#hud{
   position: fixed;
   left: 12px;
   top: 12px;
@@ -9,29 +9,18 @@ html,body { height:100%; margin:0; background:#020417; color:#dff6ff; font-famil
   background: rgba(0,0,0,0.45);
   padding: 8px 10px;
   border-radius: 8px;
-  font-weight:700;
-  font-size:13px;
   display:flex;
   gap:12px;
   align-items:center;
+  font-weight:700;
+  font-size:13px;
 }
-#hud button { padding:6px 8px; border-radius:8px; border:none; background:#0ea7ff; color:#001827; cursor:pointer; font-weight:700; }
-
-/* toast */
-#toast {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 16px;
-  background: rgba(0,0,0,0.6);
-  padding: 8px 12px;
-  border-radius: 8px;
-  display: none;
-  z-index: 60;
+#hud .hud-actions { display:flex; gap:8px; }
+#hud button{
+  padding:6px 8px;border-radius:8px;border:none;background:#0ea7ff;color:#001827;cursor:pointer;font-weight:700
 }
 
-/* menu */
-#menuOverlay {
+#menuOverlay{
   position: fixed;
   left: 50%;
   top: 50%;
@@ -44,15 +33,21 @@ html,body { height:100%; margin:0; background:#020417; color:#dff6ff; font-famil
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   color: #dff6ff;
 }
-#menuOverlay h3 { margin:0 0 10px 0; color:#8ee6ff; }
-#menuOverlay label { display:block; margin-top:10px; color:#bfeaff; font-size:13px; }
-#menuOverlay input[type=number], #menuOverlay input[type=range] { width:100%; margin-top:8px; padding:8px; border-radius:8px; border:none; background:#071226; color:#dff6ff; }
-#menuOverlay .row { display:flex; gap:8px; margin-top:12px; }
-#menuOverlay button { flex:1; padding:10px; border-radius:8px; border:none; background:#0fb8ff; color:#001018; font-weight:700; cursor:pointer; }
+#menuOverlay h2{ margin:0 0 10px 0; color:#8ee6ff; }
+#menuOverlay label{ display:block; margin-top:10px; color:#bfeaff; font-size:13px }
+#menuOverlay input[type="number"], #menuOverlay input[type="range"]{
+  width:100%; margin-top:8px; padding:8px; border-radius:8px; border:none; background:#071226; color:#dff6ff;
+}
+#menuOverlay .row{ display:flex; gap:8px; margin-top:12px; }
+#menuOverlay button{ flex:1; padding:10px; border-radius:8px; border:none; background:#0fb8ff; color:#001018; font-weight:700; cursor:pointer; }
 
-/* XR manual buttons container */
-#xrButtons { position: fixed; left:12px; bottom:12px; z-index:61; display:flex; gap:8px; }
-#xrButtons button { padding:8px 10px; border-radius:8px; border:none; background:#0fb8ff; color:#001018; font-weight:700; cursor:pointer; }
+/* toast */
+#toast{
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px;
+  background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 8px; display: none; z-index: 60;
+  color: #dff6ff;
+}
 
-/* Ensure A-Frame canvas visible behind overlays */
-a-scene { height:100vh; width:100vw; display:block; }
+/* xrButtons */
+#xrButtons{ position: fixed; left: 12px; bottom: 12px; z-index: 61; display:flex; gap:8px; }
+#xrButtons button{ padding:8px 10px; border-radius:8px; border:none; background:#0fb8ff; color:#001018; font-weight:700; cursor:pointer; }
