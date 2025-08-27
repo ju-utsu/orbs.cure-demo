@@ -60,9 +60,11 @@
   <!-- Optional manual XR buttons (non intrusive) -->
   <div id="xrButtons" style="display:none">
     <button id="enterVRBtn">Enter VR</button>
-    <button id="enterARBtn" style="display:none">Enter AR</button>
+    <button id="enterARBtn">Enter AR</button>
   </div>
-
+    
+    <a-entity id="arReticle" visible="false" geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08" material="color: #0ff; shader: flat; opacity: 0.7" position="0 0 0" rotation="-90 0 0"></a-entity>
+  
   <!-- A-Frame scene (kept visible so built-in VR button appears) -->
   <a-scene id="scene" renderer="antialias:true" background="color: #020417" vr-mode-ui="enabled: true" webxr="optionalFeatures: hit-test, local-floor">
     <a-assets>
