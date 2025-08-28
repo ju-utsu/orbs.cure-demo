@@ -1,53 +1,101 @@
-/* style.css - UI + overlay styles */
-html,body{height:100%;margin:0;background:#020417;color:#dff6ff;font-family:system-ui,Segoe UI,Roboto,Arial}
+html, body {
+  height:100%;
+  margin:0;
+  background:#030911;
+  color:#fff;
+  font-family:system-ui;
+}
 
-#hud{
-  position: fixed;
-  left: 12px;
-  top: 12px;
-  z-index: 60;
-  background: rgba(0,0,0,0.45);
-  padding: 8px 10px;
-  border-radius: 8px;
-  display:flex;
-  gap:12px;
-  align-items:center;
+#hud {
+  position:fixed;
+  left:12px;
+  top:12px;
+  z-index:11;
   font-weight:700;
+  text-shadow:0 1px 3px rgba(0,0,0,.6);
+  font-size:13px;
+  background:rgba(0,0,0,0.38);
+  padding:8px 10px;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+#hud button {
+  padding:4px 8px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:#0e2a3e;
+  color:#cfe9ff;
+  cursor:pointer;
+  font-weight:700;
+  font-size:11px;
+}
+
+#toast {
+  position:fixed;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,.65);
+  padding:8px 12px;
+  border-radius:10px;
+  display:none;
+  z-index:12;
   font-size:13px;
 }
-#hud .hud-actions { display:flex; gap:8px; }
-#hud button{
-  padding:6px 8px;border-radius:8px;border:none;background:#0ea7ff;color:#001827;cursor:pointer;font-weight:700
+
+#menuOverlay {
+  display:block;
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:20;
+  background:rgba(10,12,18,0.95);
+  padding:18px;
+  border-radius:14px;
+  color:#fff;
+  width:320px;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
 }
 
-#menuOverlay{
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%,-50%);
-  z-index: 70;
-  background: rgba(6,10,16,0.98);
-  padding: 18px;
-  border-radius: 12px;
-  width: 340px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-  color: #dff6ff;
+#menuOverlay h3 { margin:0 0 8px 0; }
+#menuOverlay label { font-size:13px; }
+#menuOverlay input {
+  width:100%;
+  padding:8px;
+  margin-top:6px;
+  margin-bottom:10px;
+  border-radius:6px;
+  border:1px solid #333;
+  background:#0f1520;
+  color:#fff;
 }
-#menuOverlay h2{ margin:0 0 10px 0; color:#8ee6ff; }
-#menuOverlay label{ display:block; margin-top:10px; color:#bfeaff; font-size:13px }
-#menuOverlay input[type="number"], #menuOverlay input[type="range"]{
-  width:100%; margin-top:8px; padding:8px; border-radius:8px; border:none; background:#071226; color:#dff6ff;
+#menuOverlay .row {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
 }
-#menuOverlay .row{ display:flex; gap:8px; margin-top:12px; }
-#menuOverlay button{ flex:1; padding:10px; border-radius:8px; border:none; background:#0fb8ff; color:#001018; font-weight:700; cursor:pointer; }
-
-/* toast */
-#toast{
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px;
-  background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 8px; display: none; z-index: 60;
-  color: #dff6ff;
+#menuOverlay button {
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  background:#1f9cff;
+  color:#fff;
+  cursor:pointer;
 }
-
-/* xrButtons */
-#xrButtons{ position: fixed; left: 12px; bottom: 12px; z-index: 61; display:flex; gap:8px; }
-#xrButtons button{ padding:8px 10px; border-radius:8px; border:none; background:#0fb8ff; color:#001018; font-weight:700; cursor:pointer; }
+#enterARBtn {
+  display:none;
+  position:fixed;
+  bottom:18px;
+  right:18px;
+  z-index:20;
+  padding:10px;
+  border-radius:8px;
+  background:#1f9cff;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
