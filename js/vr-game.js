@@ -6,7 +6,7 @@ const state = {
   orbGazeMs: 150,
   dangerGazeMs: 500,
   timers: new Map(),
-  roundTime: 60,
+  roundTime: 6000,
   roundTimer: null,
   intervals: { orb: null, danger: null },
 };
@@ -160,7 +160,7 @@ function closeMenuSave(){
 
 function startRound(){
   clearInterval(state.roundTimer);
-  state.roundTime = 60;
+  state.roundTime = 6000;
   timeVal.textContent = state.roundTime;
   state.roundTimer = setInterval(()=>{
     if(!state.running || state.paused) return;
