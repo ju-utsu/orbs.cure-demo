@@ -72,8 +72,8 @@ function spawnDanger(){
   dangerSpawner.appendChild(bad);
 }
 
-const MAX_ORBS_ON_SCREEN = 10;
-const MAX_DANGER_ON_SCREEN = 5;
+const MAX_ORBS_ON_SCREEN = 300;
+const MAX_DANGER_ON_SCREEN = 85;
 
 function startContinuousSpawns(){
   stopContinuousSpawns();
