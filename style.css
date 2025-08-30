@@ -33,6 +33,7 @@ html, body {
   font-size:11px;
 }
 
+/* Toast */
 #toast {
   position:fixed;
   left:50%;
@@ -86,6 +87,7 @@ html, body {
   color:#fff;
   cursor:pointer;
 }
+/* AR button */
 #enterARBtn {
   display:none;
   position:fixed;
