@@ -165,6 +165,7 @@ function onXRFrame(time, frame){
     arReticle.object3D.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
     // Keep reticle flat on surface (already -90 on X). If you want surface normals, compute quaternion here.
     arReticle.object3D.updateMatrixWorld(true);
+    }else{
     // Could hide reticle if no surface; we keep it visible to encourage scan.
   }
 }
