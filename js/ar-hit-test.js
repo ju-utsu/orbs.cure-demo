@@ -1,6 +1,7 @@
+// DOM refs
 const enterARBtn = document.getElementById('enterARBtn');
 const arReticle = document.getElementById('arReticle');
-const scene = document.querySelector('a-scene');
+const sceneEl = document.querySelector('a-scene');
 const scoreVal = document.getElementById('scoreVal');
 const toast = document.getElementById('toast');
 
@@ -8,14 +9,6 @@ const toast = document.getElementById('toast');
 let xrSession = null;
 let xrRefSpace = null;
 let xrHitTestSource = null;
-
-// Separate AR state so it doesn’t conflict with VR flow
-const arState = {
-  score: 0,
-  running: false,
-  orbInterval: null,
-  dangerInterval: null
-};
 
 // small helper to show on-screen messages
 function showToast(msg, ms=1500){
@@ -27,10 +20,14 @@ function showToast(msg, ms=1500){
 
 function setScore(v){ state.score=v; scoreVal.textContent=v; }
 
-// Wait for A-Frame scene renderer to be ready
+// Wait for A-Frame scene renderer to be exist (resolves with renderer)
 function waitForSceneRenderer() {
   return new Promise((resolve) => {
     if (sceneEl && sceneEl.renderer && sceneEl.renderer.xr) return resolve(sceneEl.renderer);
+    if (!sceneEl) {
+      console.warn('A-Frame scene element not found.');
+      return resolve(null);
+    }
     // A-Frame fires 'loaded' when scene is ready and renderer exists
     sceneEl.addEventListener('loaded', () => {
       // renderer may still be initializing — small timeout guards timing issues
@@ -39,38 +36,28 @@ function waitForSceneRenderer() {
   });
 }
 
-// AR support detection & button visibility (optimistic)
-function setupARButton() {
-  if (!enterARBtn) return;
-  if (!navigator.xr) {
-    console.warn('navigator.xr not available — AR likely not supported by this browser.');
-    // don't show button if navigator.xr doesn't exist
-    enterARBtn.style.display = 'none';
-    return;
-  }
-
-  // Hide then show only when we determine it's likely supported
+  // hide until check completes (we may still show it optimistically)
   enterARBtn.style.display = 'none';
-  // Try the spec check but show the button optimistically so user can try
-  // (some browsers/devices return false erroneously)
-  navigator.xr.isSessionSupported && navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-    if (supported) {
-      enterARBtn.style.display = 'block';
-      console.log('immersive-ar supported: showing AR button');
-    } else {
-      // Not reported as supported — still show button (user can try) but warn
-      console.warn('immersive-ar reported unsupported; showing button optimistically for manual testing.');
-      enterARBtn.style.display = 'block';
-    }
-  }).catch((err)=>{
-    console.warn('isSessionSupported failed:', err);
-    // fallback: show button if navigator.xr exists
-    enterARBtn.style.display = 'block';
-  });
 
-  // As additional fallback: if isSessionSupported is not present, still allow trying
-  if (!navigator.xr.isSessionSupported) {
-    console.log('navigator.xr.isSessionSupported missing — showing AR button for manual try');
+  if (navigator.xr.isSessionSupported) {
+    navigator.xr.isSessionSupported('immersive-ar')
+      .then((supported) => {
+        if (supported) {
+          enterARBtn.style.display = 'block';
+          console.log('immersive-ar supported — showing AR button.');
+        } else {
+          // Some devices report false incorrectly — give user a chance to try
+          console.warn('immersive-ar reported unsupported; showing button optimistically for manual try.');
+          enterARBtn.style.display = 'block';
+        }
+      })
+      .catch((err) => {
+        console.warn('isSessionSupported check failed:', err, '— showing AR button optimistically.');
+        enterARBtn.style.display = 'block';
+      });
+  } else {
+    // older implementations may not have isSessionSupported — let user try
+    console.log('navigator.xr.isSessionSupported missing — showing AR button for manual try.');
     enterARBtn.style.display = 'block';
   }
 }
@@ -89,7 +76,7 @@ function spawnOrbAtPosition(pos) {
   orb.setAttribute('emissive', '#ffeb99');
   orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
   orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800+Math.floor(Math.random()*900)}; to: ${pos.x} ${pos.y+0.18} ${pos.z}; loop: true; easing: easeInOutSine`);
-  orb.dataset.gaze = 'collect';
+ 
   // Attach click handler to allow immediate collection in AR via cursor/select as well
   orb.addEventListener('click', ()=>{
     try { document.getElementById('collectSound').play().catch(()=>{}); } catch(e){}
@@ -98,28 +85,38 @@ function spawnOrbAtPosition(pos) {
     p.setAttribute('radius','0.04');
     p.setAttribute('color','#fff');
     p.object3D.position.set(pos.x,pos.y,pos.z);
-    sceneEl.appendChild(p);
+    (sceneEl || document.body).appendChild(p);
     setTimeout(()=> p.parentNode && p.parentNode.removeChild(p), 600);
     orb.parentNode && orb.parentNode.removeChild(orb);
     // Attempt to update score if global setScore exists
-    if (typeof window.setScore === 'function') window.setScore((window.state && window.state.score) ? window.state.score + 1 : 1);
+    if (typeof window.setScore === 'function') {
+      try {
+        const current = (window.state && window.state.score) ? window.state.score : 0;
+        window.setScore(current + 1);
+      } catch(e){ console.warn('setScore call failed', e); }
+    }
   });
 
   if (collectSpawner) collectSpawner.appendChild(orb);
   else sceneEl.appendChild(orb);
 }
 
-function spawnARDanger(){
-  const p = arReticle.object3D.position;
-  const danger = document.createElement('a-box');
-  danger.classList.add('ar-danger');
-  danger.dataset.gaze = 'danger';
-  danger.setAttribute('width','0.3'); danger.setAttribute('height','0.3'); danger.setAttribute('depth','0.3');
-  danger.setAttribute('color','#d43b3b');
-  danger.setAttribute('position', `${p.x + (Math.random()-0.5)*0.6} ${p.y} ${p.z + (Math.random()-0.5)*0.6}`);
-  danger.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 4200; loop:true; easing:linear');
-  scene.appendChild(danger);
+// spawn a danger box slightly around the reticle (used in AR)
+function spawnARDanger(pos) {
+  if (!pos) return;
+  const dx = (Math.random()-0.5)*0.6;
+  const dz = (Math.random()-0.5)*0.6;
+  const bad = document.createElement('a-box');
+  bad.classList.add('interactable');
+  bad.dataset.gaze = 'danger';
+  bad.setAttribute('width','0.36'); bad.setAttribute('height','0.36'); bad.setAttribute('depth','0.36');
+  bad.setAttribute('color','#d43b3b');
+  bad.setAttribute('position', `${pos.x + dx} ${pos.y} ${pos.z + dz}`);
+  bad.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 4200; loop:true; easing:linear');
+  sceneEl.appendChild(bad);
 }
+
+
 
 // Optional: tap screen to attempt collect/hit object at center of view (fallback)
 function onARSelect(){
@@ -176,7 +173,7 @@ function onARSelect(){
 
 // ---------------- Initialize AR ----------------
 async function initAR(){
-  if(!navigator.xr){ alert("WebXR not supported"); return; }
+  if(!('xr' in navigator)) { alert("WebXR not supported"); return; }
 
   showToast('Starting AR session...');
   try {
@@ -188,25 +185,25 @@ async function initAR(){
 
      // wait for A-Frame renderer to exist
     const renderer = await waitForSceneRenderer();
-    if (!renderer) throw new Error('Renderer not available after scene loaded');
+    if (!renderer) {
+      throw new Error('Renderer not available after scene loaded');
+    }
 
     // set renderer clear so camera shows through
     // For AR we want transparent background so the camera feed is visible
-    try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); } catch(e){/* ignore */ }
+    try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); } catch(e)
 
 
     // Hand session to A-Frame / three.js renderer
     if (renderer.xr && typeof renderer.xr.setSession === 'function') {
-      await threeXR.setSession(xrSession);
+      await renderer.xr.setSession(xrSession);
     } else {
       // fallback: try setting baseLayer manually (rare)
       const gl = renderer.getContext && renderer.getContext();
       if (gl) {
         xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
         console.warn('Used manual XRWebGLLayer fallback; prefer renderer.xr.setSession in A-Frame');
-      } else {
-        console.warn('Could not get GL context from renderer; AR may not render properly');
-      }
+      else console.warn('Could not get GL context from renderer; AR may not render properly');
     }
 
     // reference spaces & hit-test source
@@ -227,7 +224,7 @@ async function initAR(){
     // run frame loop
     xrSession.requestAnimationFrame(onXRFrame);
 
-    // 
+    // optional: end handling
     xrSession.addEventListener('end', ()=>{
       arReticle.setAttribute('visible','false');
       xrSession = null;
@@ -238,7 +235,7 @@ async function initAR(){
 
     
 
-  }catch(err){
+  } catch(err){
     console.error('Failed to start AR session:', err);
     showToast('AR failed to start — check console for details', 2500);
     // helpful hint for the user / dev
@@ -249,12 +246,12 @@ async function initAR(){
 
 // ---------------- AR Frame : Per-frame AR update (hit-test -> reticle pose) ----------------
 function onXRFrame(time, frame){
-  const session = frame.session;
-  session.requestAnimationFrame(onXRFrame);
+  if (!xrSession) return;
+  xrSession.requestAnimationFrame(onXRFrame);
 
   if(!hitTestSource || !xrRefSpace) return;
   const results = frame.getHitTestResults(xrHitTestSource);
-  if(results.length > 0){
+  if(results.length > 0) {
     const pose = results[0].getPose(xrRefSpace);
     const p = pose.transform.position;
     arReticle.object3D.position.set(p.x, p.y, p.z);
