@@ -27,7 +27,9 @@ const collectSpawner = document.getElementById('collect-spawner');
 const dangerSpawner = document.getElementById('danger-spawner');
 const ray = document.getElementById('ray');
 const reticle = document.getElementById('reticle');
+const sceneEl  = document.getElementById('scene');
 
+// --------- UI helpers ---------
 function showToast(msg, ms=1200){
   toast.textContent=msg; toast.style.display='block';
   clearTimeout(toast._t);
@@ -136,6 +138,7 @@ function clearHover(el){
   if(to){ clearTimeout(to); state.timers.delete(el);}
 }
 
+// --------- Particles ---------
 function particleBurst(pos){
   for(let i=0;i<10;i++){
     const p=document.createElement('a-sphere');
@@ -150,7 +153,8 @@ function particleBurst(pos){
 }
 
 // ---------------- Menu / game flow ----------------
-function openMenu(){ state.paused = true; overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false'); showToast('Menu opened'); }
+function openMenu(){ state.paused = true; overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false');
+                    showToast('Menu opened'); }
 function closeMenuSave(){
   state.paused = false; overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true');
   state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs;
@@ -173,6 +177,7 @@ function startRound(){
 function startGame(){
   closeMenuSave();
   state.running = true; state.paused = false; setScore(0);
+  // seed a few objects
   for(let i=0;i<6;i++) spawnOrb();
   for(let i=0;i<3;i++) spawnDanger();
   startContinuousSpawns();
@@ -201,6 +206,7 @@ restartBtnHtml.addEventListener('click', restart);
 openMenuBtn.addEventListener('click', openMenu);
 window.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='m') openMenu(); });
 
+// On load
 overlay.style.display='block';
 overlay.setAttribute('aria-hidden','false');
 setScore(0); timeVal.textContent = 60;
