@@ -1,104 +1,171 @@
+/* css/style.css
+   Visuals for Orbs.cure — HUD, menu overlay, toast, AR controls, and basic page styles.
+*/
+
 html, body {
-  height:100%;
-  margin:0;
-  background:#030911;
-  color:#fff;
-  font-family:system-ui;
+  height: 100%;
+  margin: 0;
+  background: #030911;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Make the A-Frame canvas fill the screen */
+a-scene {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+/* HUD (top-left) */
 #hud {
-  position:fixed;
-  left:12px;
-  top:12px;
-  z-index:11;
-  font-weight:700;
-  text-shadow:0 1px 3px rgba(0,0,0,.6);
-  font-size:13px;
-  background:rgba(0,0,0,0.38);
-  padding:8px 10px;
-  border-radius:8px;
-  display:flex;
-  align-items:center;
-  gap:8px;
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 110;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  font-size: 13px;
+  background: rgba(0,0,0,0.38);
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
 #hud button {
-  padding:4px 8px;
-  border-radius:6px;
-  border:1px solid rgba(255,255,255,0.2);
-  background:#0e2a3e;
-  color:#cfe9ff;
-  cursor:pointer;
-  font-weight:700;
-  font-size:11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0e2a3e;
+  color: #cfe9ff;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px;
 }
 
-/* Toast */
+/* Toast (bottom-centre) */
 #toast {
-  position:fixed;
-  left:50%;
-  bottom:18px;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,.65);
-  padding:8px 12px;
-  border-radius:10px;
-  display:none;
-  z-index:12;
-  font-size:13px;
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.65);
+  padding: 8px 12px;
+  border-radius: 10px;
+  display: none;
+  z-index: 120;
+  font-size: 13px;
 }
 
+/* ===== Menu overlay (center) =====
+   Slight translucent glass-like panel with subtle blur.
+   It is displayed by default on load (JS may toggle).
+*/
 #menuOverlay {
-  display:block;
-  position:fixed;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  z-index:20;
+  display: block;               /* JS controls visibility; set block by default */
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  z-index: 200;
+  width: 320px;
+  padding: 18px;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
   backdrop-filter: blur(6px);
-  padding:18px;
-  border-radius:14px;
-  color:#fff;
-  width:320px;
-  box-shadow:0 10px 30px rgba(0,0,0,.6);
+  -webkit-backdrop-filter: blur(6px);
 }
 
-#menuOverlay h3 { margin:0 0 8px 0; }
-#menuOverlay label { font-size:13px; }
+/* Menu internals */
+#menuOverlay h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+#menuOverlay label {
+  font-size: 13px;
+  display: block;
+  margin-top: 8px;
+}
 #menuOverlay input {
-  width:100%;
-  padding:8px;
-  margin-top:6px;
-  margin-bottom:10px;
-  border-radius:6px;
-  border:1px solid #333;
-  background:#0f1520;
-  color:#fff;
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #0f1520;
+  color: #fff;
+  box-sizing: border-box;
 }
 #menuOverlay .row {
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
 }
 #menuOverlay button {
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:#1f9cff;
-  color:#fff;
-  cursor:pointer;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #1f9cff;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  flex: 1 1 auto;
+  min-width: 80px;
 }
-/* AR button */
+
+/* AR controls (bottom-right) */
+#arControls {
+  position: fixed;
+  right: 12px;
+  bottom: 18px;
+  z-index: 120;
+  text-align: right;
+}
 #enterARBtn {
-  display:none;
-  position:fixed;
-  bottom:18px;
-  right:18px;
-  z-index:20;
-  padding:10px;
-  border-radius:8px;
-  background:#1f9cff;
-  color:#fff;
-  border:none;
-  cursor:pointer;
+  display: none; /* shown by JS if available */
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #1f9cff;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
 }
+#arStatus {
+  margin-top: 8px;
+  color: #9fdfff;
+  font-size: 12px;
+  max-width: 220px;
+  text-align: right;
+  line-height: 1.1;
+}
+
+/* Game over panel (in-scene uses A-Frame, but keep some fallback) */
+#gameOverPanel {
+  pointer-events: none;
+}
+
+/* Small responsive tweaks */
+@media (max-width: 420px) {
+  #menuOverlay { width: min(92vw, 320px); padding: 14px; }
+  #hud { font-size: 12px; padding: 6px 8px; }
+  #enterARBtn { padding: 8px 10px; }
+}
+
+/* Accessibility focus styles */
+button:focus, input:focus {
+  outline: 2px solid rgba(31,156,255,0.6);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(31,156,255,0.06);
+}
+
+/* Light helper - ensure interactable elements are easy to see in VR too */
+.interactable { cursor: pointer; }
