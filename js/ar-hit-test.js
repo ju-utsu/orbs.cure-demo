@@ -1,81 +1,72 @@
-// Robust AR hit-test + VR entry helper for Orbs.cure
-// - Shows/hides AR button depending on capability (or via ?arforce=1 debug)
-// - Starts an immersive-ar session with hit-test, positions #arReticle
-// - Spawns orbs on select (tap) at reticle
-// - Disables duplicate session starts and restores UI when session ends
-// - Also wires Enter VR button to scene.enterVR()
+// Updated AR flow: DOES NOT request dom-overlay, hides overlay via display:none when AR starts,
+// restores overlay after AR ends. Also wires Enter VR button.
 
 (function () {
-  // --- DOM refs (IDs must match index.html) ---
   const enterARBtn = document.getElementById('enterARBtn');
   const enterVRBtn = document.getElementById('enterVRBtn');
   const arStatus = document.getElementById('arStatus');
   const arReticle = document.getElementById('arReticle');
-  const sceneEl = document.getElementById('scene'); // <a-scene id="scene">
+  const sceneEl = document.getElementById('scene');
   const collectSpawner = document.getElementById('collect-spawner');
   const overlayEl = document.getElementById('menuOverlay');
   const toast = document.getElementById('toast');
 
-  // XR state
   let xrSession = null;
   let xrRefSpace = null;
   let hitTestSource = null;
-  let xrAnimationHandle = null;
-  let overlayWasHiddenBeforeAR = false;
+  let xrAnim = null;
+  let overlayWasVisible = true;
 
-  // --- small UI helpers ---
-  function showToast(msg, ms = 1500) {
+  function showToast(msg, ms = 1200) {
     if (!toast) { console.log('[TOAST]', msg); return; }
     toast.textContent = msg;
     toast.style.display = 'block';
     clearTimeout(toast._t);
     toast._t = setTimeout(() => (toast.style.display = 'none'), ms);
   }
-  function setArStatus(text, color = '#9fdfff') {
-    if (arStatus) { arStatus.textContent = text; arStatus.style.color = color; }
-    else console.log('[AR STATUS]', text);
+  function setArStatus(txt, color = '#9fdfff') {
+    if (arStatus) { arStatus.textContent = txt; arStatus.style.color = color; } else console.log('[AR STATUS]', txt);
   }
-  function disableARButton(label) {
+  function disableARBtn(label) {
     if (!enterARBtn) return;
     enterARBtn.disabled = true;
     if (label) enterARBtn.textContent = label;
     enterARBtn.style.pointerEvents = 'none';
   }
-  function enableARButton(text = 'Enter AR') {
+  function enableARBtn(text = 'Enter AR') {
     if (!enterARBtn) return;
     enterARBtn.disabled = false;
     enterARBtn.textContent = text;
     enterARBtn.style.pointerEvents = 'auto';
     enterARBtn.style.display = 'inline-block';
   }
-  function hideOverlayForAR() {
+
+  function hideOverlayForce() {
     if (!overlayEl) return;
-    overlayWasHiddenBeforeAR = overlayEl.getAttribute('aria-hidden') === 'true';
+    overlayWasVisible = !(overlayEl.getAttribute('aria-hidden') === 'true');
+    // set display none to absolutely prevent it blocking camera
+    overlayEl.style.display = 'none';
     overlayEl.setAttribute('aria-hidden', 'true');
-    overlayEl.style.pointerEvents = 'none';
   }
-  function restoreOverlayAfterAR() {
+  function restoreOverlayForce() {
     if (!overlayEl) return;
-    // restore previous visible state (if menu was closed before AR, keep closed)
-    if (!overlayWasHiddenBeforeAR) {
+    if (overlayWasVisible) {
+      overlayEl.style.display = 'block';
       overlayEl.setAttribute('aria-hidden', 'false');
-      overlayEl.style.pointerEvents = 'auto';
+    } else {
+      overlayEl.style.display = 'block'; // keep in DOM but hidden by aria if user closed earlier
+      overlayEl.setAttribute('aria-hidden', 'true');
     }
   }
 
-  // --- wait until a-scene.renderer is available ---
   function waitForSceneRenderer() {
     return new Promise((resolve) => {
       if (!sceneEl) { resolve(null); return; }
       if (sceneEl.renderer) return resolve(sceneEl.renderer);
-      sceneEl.addEventListener('loaded', () => {
-        // small delay to allow three.js renderer init
-        setTimeout(() => resolve(sceneEl.renderer), 50);
-      }, { once: true });
+      sceneEl.addEventListener('loaded', () => setTimeout(() => resolve(sceneEl.renderer), 50), { once: true });
     });
   }
 
-  // --- spawn helpers (mirror VR spawn style) ---
   function spawnOrbAtPosition(pos) {
     if (!pos) return;
     const orb = document.createElement('a-sphere');
@@ -85,8 +76,7 @@
     orb.setAttribute('color', '#ffd84d');
     orb.setAttribute('emissive', '#ffeb99');
     orb.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-    orb.setAttribute('animation__float',
-      `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random()*900)}; to: ${pos.x} ${pos.y + 0.18} ${pos.z}; loop: true; easing: easeInOutSine`);
+    orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random()*900)}; to: ${pos.x} ${pos.y + 0.18} ${pos.z}; loop: true; easing: easeInOutSine`);
     orb.addEventListener('click', () => {
       try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (e) {}
       orb.parentNode && orb.parentNode.removeChild(orb);
@@ -94,18 +84,15 @@
         try {
           const cur = (window.state && window.state.score) ? window.state.score : 0;
           window.setScore(cur + 1);
-        } catch (e) { console.warn('setScore failed', e); }
+        } catch (e) {}
       }
     });
-    if (collectSpawner) collectSpawner.appendChild(orb);
-    else if (sceneEl) sceneEl.appendChild(orb);
+    (collectSpawner || sceneEl).appendChild(orb);
   }
 
-  // --- per-frame hit-test -> update reticle ---
   function onXRFrame(time, frame) {
     if (!xrSession) return;
-    xrAnimationHandle = xrSession.requestAnimationFrame(onXRFrame);
-
+    xrAnim = xrSession.requestAnimationFrame(onXRFrame);
     if (!hitTestSource || !xrRefSpace) return;
     const results = frame.getHitTestResults(hitTestSource);
     if (results && results.length > 0) {
@@ -121,95 +108,81 @@
     }
   }
 
-  // --- start XR session and hit-test source ---
   async function initAR() {
     if (!('xr' in navigator)) {
-      alert('WebXR not available in this browser.');
+      alert('WebXR not available');
       setArStatus('WebXR unavailable', '#ff8080');
       return;
     }
-    if (xrSession) { console.warn('XR session already active'); return; }
-    disableARButton('Starting AR...');
+    if (xrSession) return;
+
+    disableARBtn('Starting AR...');
     setArStatus('Requesting AR session...');
 
-    // hide overlay so camera view is unobstructed
-    try { hideOverlayForAR(); } catch (e) {}
+    // aggressively hide overlay so camera feed is visible
+    try { hideOverlayForce(); } catch (e) {}
 
     try {
+      // NOTE: don't request dom-overlay here — it can keep HTML overlays visible and block camera feed.
       xrSession = await navigator.xr.requestSession('immersive-ar', {
         requiredFeatures: ['hit-test'],
-        optionalFeatures: ['dom-overlay', 'local-floor'],
-        domOverlay: { root: document.body }
+        optionalFeatures: ['local-floor']
       });
 
       const renderer = await waitForSceneRenderer();
-      if (!renderer) throw new Error('A-Frame renderer not available');
+      if (!renderer) throw new Error('Renderer unavailable');
 
-      // try to make clear background so camera shows through
-      try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); } catch (e) {}
+      // Try to let renderer show camera feed behind scene
+      try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); } catch(e){}
 
-      // attach session to renderer (preferred)
       if (renderer.xr && typeof renderer.xr.setSession === 'function') {
         await renderer.xr.setSession(xrSession);
       } else {
-        // fallback to manual XRWebGLLayer binding
-        const gl = (typeof renderer.getContext === 'function') ? renderer.getContext() : (renderer.context || null);
-        if (gl) {
-          xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
-        } else {
-          console.warn('Could not obtain GL context to attach XR session.');
-        }
+        const gl = renderer.getContext && renderer.getContext();
+        if (gl) xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
       }
 
-      // create ref spaces and hit test source
       xrRefSpace = await xrSession.requestReferenceSpace('local');
       const viewerSpace = await xrSession.requestReferenceSpace('viewer');
       hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
-      // UI updates
       setArStatus('AR active — move device to detect surfaces', '#9fffb3');
-      showToast('AR session started');
+      showToast('AR started');
 
-      // prevent re-entry
-      disableARButton('AR active');
+      disableARBtn('AR active');
 
-      // spawn on select (tap)
       xrSession.addEventListener('select', () => {
-        const pos = (arReticle && arReticle.object3D) ? arReticle.object3D.position : null;
+        const pos = arReticle && arReticle.object3D ? arReticle.object3D.position : null;
         if (pos) spawnOrbAtPosition({ x: pos.x, y: pos.y, z: pos.z });
       });
 
       xrSession.addEventListener('end', () => {
         try {
           if (arReticle) arReticle.setAttribute('visible', 'false');
-          if (hitTestSource) { if (hitTestSource.cancel) try { hitTestSource.cancel(); } catch(_) {} hitTestSource = null; }
+          if (hitTestSource) { try { hitTestSource.cancel && hitTestSource.cancel(); } catch(_) {} hitTestSource = null; }
           xrRefSpace = null;
           xrSession = null;
-          if (xrAnimationHandle) { xrAnimationHandle = null; }
-          setArStatus('AR session ended', '#ffd880');
-          showToast('AR session ended', 1200);
+          xrAnim = null;
+          setArStatus('AR ended', '#ffd880');
+          showToast('AR ended', 1000);
         } finally {
-          // re-enable button for another try
-          enableARButton('Enter AR');
-          // restore overlay state (don't force-open if it was closed earlier)
-          restoreOverlayAfterAR();
+          enableARBtn('Enter AR');
+          restoreOverlayForce();
         }
       });
 
-      // start animation loop for hit-test
-      xrAnimationHandle = xrSession.requestAnimationFrame(onXRFrame);
+      xrAnim = xrSession.requestAnimationFrame(onXRFrame);
     } catch (err) {
       console.error('initAR failed:', err);
       setArStatus('Failed to start AR — see console', '#ff8080');
       showToast('Failed to start AR — see console', 2500);
-      enableARButton('Enter AR');
-      // restore overlay so user can change settings
-      try { restoreOverlayAfterAR(); } catch (e) {}
+      enableARBtn('Enter AR');
+      try { restoreOverlayForce(); } catch (e) {}
     }
   }
 
-  // --- setup & capability detection ---
-  function setupARButtonAndStatus() {
+  // capability check & wiring
+  function setup() {
     if (!enterARBtn) {
       setArStatus('AR UI missing', '#ffd880');
     } else {
@@ -218,58 +191,42 @@
     }
 
     if (!('xr' in navigator)) {
-      setArStatus('navigator.xr missing — AR unavailable', '#ff8080');
+      setArStatus('navigator.xr missing — AR not available', '#ff8080');
       if (enterARBtn) enterARBtn.style.display = 'none';
     } else if (typeof navigator.xr.isSessionSupported === 'function') {
-      navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+      navigator.xr.isSessionSupported('immersive-ar').then(supported => {
         if (supported) {
           setArStatus('AR supported — tap Enter AR', '#9fffb3');
-          if (enterARBtn) enableARButton('Enter AR');
+          if (enterARBtn) enableARBtn('Enter AR');
         } else {
           setArStatus('AR not advertised — try Enter AR (may still work)', '#ffd880');
-          if (enterARBtn) enableARButton('Enter AR');
+          if (enterARBtn) enableARBtn('Enter AR');
         }
-      }).catch((err) => {
-        console.warn('isSessionSupported failed', err);
-        setArStatus('AR check failed — try Enter AR (see console)', '#ffd880');
-        if (enterARBtn) enableARButton('Enter AR');
+      }).catch(err => {
+        console.warn('isSessionSupported error', err);
+        setArStatus('AR check failed — try Enter AR', '#ffd880');
+        if (enterARBtn) enableARBtn('Enter AR');
       });
     } else {
-      // old browser: show optimistic button
-      setArStatus('AR session check unavailable — try Enter AR', '#ffd880');
-      if (enterARBtn) enableARButton('Enter AR');
+      setArStatus('AR check unavailable — try Enter AR', '#ffd880');
+      if (enterARBtn) enableARBtn('Enter AR');
     }
 
-    // wire enterAR click (defensive)
-    if (enterARBtn) {
-      enterARBtn.addEventListener('click', () => {
-        if (xrSession) { console.warn('XR session already active'); return; }
-        initAR();
-      });
-    }
+    if (enterARBtn) enterARBtn.addEventListener('click', () => { if (!xrSession) initAR(); });
 
-    // wire VR button to A-Frame scene.enterVR (simple UX)
     if (enterVRBtn && sceneEl) {
       enterVRBtn.addEventListener('click', () => {
-        try {
-          // A-Frame exposes sceneEl.enterVR()
-          if (typeof sceneEl.enterVR === 'function') sceneEl.enterVR();
-          else if (sceneEl && sceneEl.sceneEl && typeof sceneEl.sceneEl.enterVR === 'function') sceneEl.sceneEl.enterVR();
-          else console.warn('enterVR not available on sceneEl');
-        } catch (e) {
-          console.warn('enterVR failed', e);
-        }
+        try { if (typeof sceneEl.enterVR === 'function') sceneEl.enterVR(); } catch(e) { console.warn('enterVR failed', e); }
       });
     }
 
-    // optional debug forcing via ?arforce=1
+    // debug force: ?arforce=1
     try {
-      const u = new URL(window.location.href);
-      if (u.searchParams.get('arforce') === '1') {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('arforce') === '1') {
         const dbg = document.createElement('div');
-        dbg.id = 'xr-debug';
         dbg.style = 'position:fixed;left:12px;bottom:12px;z-index:99999;padding:8px 10px;background:rgba(0,0,0,0.7);color:#9ff;font-family:monospace;border-radius:8px;white-space:pre-line;font-size:12px;max-width:320px';
-        dbg.textContent = 'AR probe: probing...';
+        dbg.textContent = 'AR probe...';
         document.body.appendChild(dbg);
         (async () => {
           dbg.textContent = 'navigator.xr: ' + (!!navigator.xr) + '\n';
@@ -279,23 +236,14 @@
               dbg.textContent += 'immersive-ar: ' + s + '\n';
             } catch (e) { dbg.textContent += 'isSessionSupported error: ' + (e.message || e) + '\n'; }
           } else dbg.textContent += 'isSessionSupported: N/A\n';
-          if (enterARBtn) {
-            enterARBtn.style.display = 'inline-block';
-            enableARButton('Enter AR');
-            dbg.textContent += '\nForced AR button (debug).';
-          }
+          if (enterARBtn) { enterARBtn.style.display = 'inline-block'; enableARBtn('Enter AR'); dbg.textContent += '\nForced AR button visible.'; }
         })();
       }
     } catch (_) {}
   }
 
-  // bootstrap
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupARButtonAndStatus);
-  } else {
-    setupARButtonAndStatus();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
 
-  // expose debug helpers (optional)
   window._arHelpers = { initAR, spawnOrbAtPosition };
 })();
