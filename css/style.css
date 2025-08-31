@@ -1,0 +1,105 @@
+/* UI + overlay styling (keeps glassy grid aesthetic) */
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #030911;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a-scene { width:100vw; height:100vh; display:block; }
+
+/* HUD */
+#hud {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 110;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  font-size: 13px;
+  background: rgba(0,0,0,0.38);
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#hud button {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0e2a3e;
+  color: #cfe9ff;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.65);
+  padding: 8px 12px;
+  border-radius: 10px;
+  display: none;
+  z-index: 120;
+  font-size: 13px;
+}
+
+/* Overlay (glass) */
+#menuOverlay {
+  display: block;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  z-index: 200;
+  width: 320px;
+  padding: 18px;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  background: rgba(12,16,22,0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: opacity .18s ease, transform .2s ease;
+}
+
+/* When hidden via aria, make non-blocking */
+#menuOverlay[aria-hidden="true"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%,-48%) scale(.99);
+  display: block;
+}
+
+#menuOverlay h3 { margin:0 0 8px 0; font-size:16px; }
+#menuOverlay label { font-size:13px; display:block; margin-top:8px; }
+#menuOverlay input {
+  width:100%; padding:8px; margin-top:6px; margin-bottom:10px; border-radius:6px; border:1px solid #333; background:#0f1520; color:#fff; box-sizing:border-box;
+}
+#menuOverlay .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+#menuOverlay button { padding:10px; border-radius:8px; border:none; background:#1f9cff; color:#fff; cursor:pointer; font-weight:700; flex:1 1 auto; min-width:80px; }
+
+/* AR controls bottom-right */
+#arControls { position: fixed; right: 12px; bottom: 18px; z-index: 120; text-align: right; }
+#enterARBtn { display:none; padding:10px 12px; border-radius:10px; border:none; background:#1f9cff; color:#fff; font-weight:700; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,0.35); }
+#arStatus { margin-top:8px; color:#9fdfff; font-size:12px; max-width:220px; text-align:right; line-height:1.1; }
+
+/* Small responsive tweaks */
+@media (max-width:420px){
+  #menuOverlay { width: min(92vw, 320px); padding:14px; }
+  #hud { font-size:12px; padding:6px 8px; }
+  #enterARBtn { padding:8px 10px; }
+}
+
+/* Accessibility focus */
+button:focus, input:focus { outline: 2px solid rgba(31,156,255,0.6); outline-offset:2px; box-shadow: 0 0 0 3px rgba(31,156,255,0.06); }
+.interactable { cursor: pointer; }
