@@ -1,31 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Orbs.cure — Orb Collector</title>
+  <title>Orbs.cure</title>
+  <link rel="stylesheet" href="style.css">
 
-  <!-- styles -->
-  <link rel="stylesheet" href="css/style.css">
-
-  <!-- A-Frame + environment -->
+  <!-- A-Frame core + environment -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
 </head>
 <body>
+  
   <!-- HUD -->
   <div id="hud">
-    Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s
+    Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s 
     <button id="openMenuBtn" title="Open settings">Settings</button>
   </div>
-  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="toast"></div>
 
-  <!-- Menu overlay -->
+  <!-- Settings Menu -->
   <div id="menuOverlay" role="dialog" aria-hidden="false">
     <h3>Game Settings</h3>
-    <label for="orbGazeInput">Orb gaze time (ms)</label>
+    <label>Orb gaze time (ms)</label>
     <input id="orbGazeInput" type="number" min="50" step="50" value="150">
-    <label for="dangerGazeInput">Danger gaze time (ms)</label>
+    <label>Danger gaze time (ms)</label>
     <input id="dangerGazeInput" type="number" min="50" step="50" value="500">
     <div class="row">
       <button id="startGameBtn">Start Game</button>
@@ -34,30 +33,33 @@
     </div>
   </div>
 
-  <!-- AR controls -->
+  <!-- AR Button + Status -->
   <div id="arControls">
-    <button id="enterARBtn" style="display:none">Enter AR</button>
-    <div id="arStatus" aria-live="polite"></div>
+    <button id="enterARBtn">Enter AR</button>
+    <div id="arStatus"></div>
   </div>
 
-  <!-- A-Frame Scene (id="scene" required by AR code) -->
+  <!-- A-Frame Scene -->
   <a-scene id="scene" renderer="antialias:true" background="color:#030911"
-           webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #hud">
+    webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #hud">
+    
     <a-assets>
       <audio id="collectSound" src="assets/audio/click.ogg"></audio>
       <audio id="dangerSound" src="assets/audio/explosion.ogg"></audio>
     </a-assets>
 
-    <!-- Environment (kept) -->
+    <!-- Environment (Grid Style) -->
     <a-entity environment="preset: starry; skyType: atmosphere; groundColor: #0a1a2a; groundTexture: walkernoise; ground: canyon; fog: 0.08; lightPosition: 0 8 -3; dressing: stones; dressingAmount: 10; dressingColor: #223a57"></a-entity>
 
-    <!-- Camera rig -->
+    <!-- Camera Rig -->
     <a-entity id="rig" position="0 1.6 0">
       <a-entity id="camera" camera look-controls>
+        <!-- Reticle -->
         <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
+        <!-- Raycaster -->
         <a-entity id="ray" raycaster="objects: .interactable; interval: 40"></a-entity>
-
-        <!-- VR in-head HUD -->
+        
+        <!-- Score in VR -->
         <a-entity position="-0.42 0.32 -1">
           <a-plane width="0.36" height="0.14" color="#000" material="opacity:0.35"></a-plane>
           <a-text id="vrScore" value="Score: 0" color="#fff" position="-0.16 -0.02 0.01" width="1.2"></a-text>
@@ -69,13 +71,11 @@
     <a-entity id="collect-spawner"></a-entity>
     <a-entity id="danger-spawner"></a-entity>
 
-    <!-- AR reticle -->
-    <a-entity id="arReticle" visible="false"
-              geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
-              material="color: #0ff; shader: flat; opacity: 0.7"
-              rotation="-90 0 0"></a-entity>
+    <!-- AR Reticle -->
+    <a-entity id="arReticle" visible="false" geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08" 
+              material="color: #0ff; shader: flat; opacity: 0.7" rotation="-90 0 0"></a-entity>
 
-    <!-- Game over panel -->
+    <!-- Game Over Panel -->
     <a-entity id="gameOverPanel" visible="false">
       <a-entity position="0 1.4 -1.2">
         <a-plane width="1.0" height="0.5" color="#200" material="opacity:0.95"></a-plane>
@@ -88,4 +88,4 @@
   <script src="js/vr-game.js"></script>
   <script src="js/ar-hit-test.js"></script>
 </body>
-</html>
+            </html>
