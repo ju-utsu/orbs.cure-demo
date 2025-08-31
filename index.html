@@ -1,65 +1,76 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Orbs.cure</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,user-scalable=no" />
+  <title>Orbs.cure — Orb Collector</title>
 
-  <!-- A-Frame core + environment -->
+  <!-- styles -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- A-Frame + environment component -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
 </head>
 <body>
-  
-  <!-- HUD -->
-  <div id="hud">
-    Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s 
+
+  <!-- ====== Top-left HUD (regular DOM, always on top) ====== -->
+  <div id="hud" role="status" aria-live="polite">
+    Score: <span id="scoreVal">0</span> &nbsp;|&nbsp; Time: <span id="timeVal">60</span>s
     <button id="openMenuBtn" title="Open settings">Settings</button>
   </div>
-  <div id="toast"></div>
 
-  <!-- Settings Menu -->
-  <div id="menuOverlay" role="dialog" aria-hidden="false">
+  <!-- toast notifications -->
+  <div id="toast" aria-live="polite"></div>
+
+  <!-- ====== Main menu overlay (contains AR + VR buttons) ====== -->
+  <div id="menuOverlay" role="dialog" aria-hidden="false" aria-label="Game menu">
     <h3>Game Settings</h3>
-    <label>Orb gaze time (ms)</label>
+
+    <label for="orbGazeInput">Orb gaze time (ms)</label>
     <input id="orbGazeInput" type="number" min="50" step="50" value="150">
-    <label>Danger gaze time (ms)</label>
+
+    <label for="dangerGazeInput">Danger gaze time (ms)</label>
     <input id="dangerGazeInput" type="number" min="50" step="50" value="500">
+
     <div class="row">
       <button id="startGameBtn">Start Game</button>
       <button id="saveSettings">Save</button>
       <button id="restartBtn">Restart</button>
     </div>
+
+    <hr style="opacity:.08;margin:12px 0">
+
+    <!-- AR + VR controls visibly placed in menu -->
+    <div id="deviceControls" style="display:flex;gap:8px;align-items:center">
+      <button id="enterARBtn" title="Start AR (mobile only)">Enter AR</button>
+      <button id="enterVRBtn" title="Enter VR (if supported)">Enter VR</button>
+      <div id="arStatus" style="margin-left:auto;font-size:12px;color:#9fdfff"></div>
+    </div>
   </div>
 
-  <!-- AR Button + Status -->
-  <div id="arControls">
-    <button id="enterARBtn">Enter AR</button>
-    <div id="arStatus"></div>
-  </div>
-
-  <!-- A-Frame Scene -->
+  <!-- ====== A-Frame scene (entire 3D world) ====== -->
   <a-scene id="scene" renderer="antialias:true" background="color:#030911"
-    webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #hud">
-    
+           webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #hud">
+
     <a-assets>
+      <!-- If you have assets in assets/audio use those; otherwise you can use CDN paths -->
       <audio id="collectSound" src="assets/audio/click.ogg"></audio>
-      <audio id="dangerSound" src="assets/audio/explosion.ogg"></audio>
+      <audio id="dangerSound"  src="assets/audio/explosion.ogg"></audio>
     </a-assets>
 
-    <!-- Environment (Grid Style) -->
-    <a-entity environment="preset: starry; skyType: atmosphere; groundColor: #0a1a2a; groundTexture: walkernoise; ground: canyon; fog: 0.08; lightPosition: 0 8 -3; dressing: stones; dressingAmount: 10; dressingColor: #223a57"></a-entity>
+    <!-- Environment (keeps your grid/starry aesthetic) -->
+    <a-entity environment="preset: starry; skyType: atmosphere; groundColor: #0a1a2a; groundTexture: walkernoise; ground: canyon; fog: 0.08; dressing: grid; dressingAmount: 8; dressingColor: #0f8bff"></a-entity>
 
-    <!-- Camera Rig -->
+    <!-- Main camera rig -->
     <a-entity id="rig" position="0 1.6 0">
       <a-entity id="camera" camera look-controls>
-        <!-- Reticle -->
+        <!-- Gaze reticle (regular VR reticle) -->
         <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
-        <!-- Raycaster -->
-        <a-entity id="ray" raycaster="objects: .interactable; interval: 40"></a-entity>
-        
-        <!-- Score in VR -->
+        <!-- Raycaster to detect gaze intersections -->
+        <a-entity id="ray" raycaster="objects: .interactable; interval:40"></a-entity>
+
+        <!-- small 3D hud (inside VR) -->
         <a-entity position="-0.42 0.32 -1">
           <a-plane width="0.36" height="0.14" color="#000" material="opacity:0.35"></a-plane>
           <a-text id="vrScore" value="Score: 0" color="#fff" position="-0.16 -0.02 0.01" width="1.2"></a-text>
@@ -67,25 +78,28 @@
       </a-entity>
     </a-entity>
 
-    <!-- Spawners -->
+    <!-- Spawners (empty containers) -->
     <a-entity id="collect-spawner"></a-entity>
     <a-entity id="danger-spawner"></a-entity>
 
-    <!-- AR Reticle -->
-    <a-entity id="arReticle" visible="false" geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08" 
-              material="color: #0ff; shader: flat; opacity: 0.7" rotation="-90 0 0"></a-entity>
+    <!-- AR reticle for hit-test (hidden by default until AR session active) -->
+    <a-entity id="arReticle" visible="false"
+              geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
+              material="color: #0ff; shader: flat; opacity: .78"
+              rotation="-90 0 0"></a-entity>
 
-    <!-- Game Over Panel -->
+    <!-- Game over panel -->
     <a-entity id="gameOverPanel" visible="false">
       <a-entity position="0 1.4 -1.2">
         <a-plane width="1.0" height="0.5" color="#200" material="opacity:0.95"></a-plane>
         <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01" width="2"></a-text>
       </a-entity>
     </a-entity>
+
   </a-scene>
 
-  <!-- Scripts -->
+  <!-- App scripts -->
   <script src="js/vr-game.js"></script>
   <script src="js/ar-hit-test.js"></script>
 </body>
-            </html>
+      </html>
