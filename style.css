@@ -78,8 +78,18 @@ a-scene {
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
   backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px): 
+   transition: opacity .18s ease, transform .2s ease;
 }
+
+/* Hide visually & make non-blocking when aria-hidden="true" */
+#menuOverlay[aria-hidden="true"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%,-48%) scale(.99);
+  display: block;
+}
+
 
 /* Menu internals */
 #menuOverlay h3 {
