@@ -1,116 +1,80 @@
+
+:root {
+  --accent: #1f9cff;
+  --glass: rgba(12,16,22,0.55);
+}
+
+/* page */
 html, body {
   height: 100%;
   margin: 0;
   background: #030911;
   color: #fff;
-  font-family: system-ui;
-  overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
+/* make a-scene full screen */
+a-scene { width: 100vw; height: 100vh; display:block; }
+
+/* HUD top-left */
 #hud {
   position: fixed;
   left: 12px;
   top: 12px;
-  z-index: 11;
-  font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0,0,0,.6);
-  font-size: 13px;
-  background: rgba(0,0,0,0.38);
-  padding: 8px 10px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  z-index: 1200;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+  background: rgba(0,0,0,0.36);
+  padding:8px 10px;
+  border-radius:8px;
+  font-size:13px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
 }
+#hud button { padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background:#0e2a3e; color:#cfe9ff; cursor:pointer; font-weight:700; }
 
-#hud button {
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: #0e2a3e;
-  color: #cfe9ff;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 11px;
-}
-
+/* toast (bottom-center) */
 #toast {
-  position: fixed;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,.65);
-  padding: 8px 12px;
-  border-radius: 10px;
-  display: none;
-  z-index: 12;
-  font-size: 13px;
+  position: fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  z-index: 1300; background: rgba(0,0,0,0.7); padding:8px 12px; border-radius:10px; display:none;
+  font-size:13px;
 }
 
+/* menu overlay - clearly above scene, translucent */
 #menuOverlay {
-  display: block;
   position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%,-50%);
-  z-index: 20;
-  background: rgba(0,0,0,0.8);
-  padding: 18px;
-  border-radius: 14px;
-  color: #fff;
-  width: 320px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  left:50%; top:50%; transform: translate(-50%,-50%);
+  z-index: 1500; width: 340px; padding: 16px; border-radius:12px;
+  background: var(--glass);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.6);
+  color: #fff; transition: all .18s ease;
+  display:block;
 }
 
-#menuOverlay h3 { margin: 0 0 8px 0; }
-#menuOverlay label { font-size: 13px; }
-#menuOverlay input {
-  width: 100%;
-  padding: 8px;
-  margin-top: 6px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #0f1520;
-  color: #fff;
-}
-#menuOverlay .row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-#menuOverlay button {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #1f9cff;
-  color: #fff;
-  cursor: pointer;
+/* when hidden use aria-hidden = true (non-blocking) */
+#menuOverlay[aria-hidden="true"] {
+  opacity: 0; pointer-events: none; transform: translate(-50%,-48%) scale(.995);
 }
 
-#arControls {
-  position: fixed;
-  right: 12px;
-  bottom: 18px;
-  z-index: 60;
-  text-align: right;
+/* internal */
+#menuOverlay h3 { margin:0 0 10px 0; font-size:16px; }
+#menuOverlay label { display:block; font-size:13px; margin-top:8px; color:#cfe9ff; opacity:.9; }
+#menuOverlay input { width:100%; padding:8px; margin-top:6px;margin-bottom:10px; border-radius:6px; background:#0f1520; border:1px solid #232f3a; color:#fff; box-sizing:border-box; }
+#menuOverlay .row { display:flex; gap:8px; margin-top:6px; }
+#menuOverlay button { padding:10px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:700; flex:1 1 auto; min-width:86px; }
+
+/* device controls */
+#enterARBtn, #enterVRBtn { background:linear-gradient(180deg,var(--accent),#1380e3); padding:10px 12px; border-radius:8px; border:none; color:#fff; }
+#arStatus { margin-left:8px; font-size:12px; color:#9fdfff; }
+
+/* small devices responsive */
+@media (max-width:420px){
+  #menuOverlay { width: min(94vw,340px); padding:12px; }
+  #hud { font-size:12px; padding:6px 8px; }
 }
 
-#enterARBtn {
-  display: none;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: none;
-  background: #1f9cff;
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-#arStatus {
-  margin-top: 8px;
-  color: #9fdfff;
-  font-size: 12px;
-  max-width: 220px;
-  text-align: right;
-  }
+/* focus styles */
+button:focus, input:focus { outline: 2px solid rgba(31,156,255,0.45); outline-offset:2px; }
