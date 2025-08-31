@@ -6,7 +6,7 @@ const state = {
   orbGazeMs: 150,
   dangerGazeMs: 500,
   timers: new Map(),
-  roundTime: 6000,
+  roundTime: 60,
   roundTimer: null,
   intervals: { orb: null, danger: null },
 };
@@ -31,6 +31,7 @@ const sceneEl  = document.getElementById('scene');
 
 // --------- UI helpers ---------
 function showToast(msg, ms=1200){
+  if (!toast) { console.log('[TOAST]', msg); return; }
   toast.textContent=msg; toast.style.display='block';
   clearTimeout(toast._t);
   toast._t=setTimeout(()=>toast.style.display='none', ms);
@@ -59,7 +60,7 @@ function spawnOrb(){
   orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
   orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${2200+Math.floor(Math.random()*1000)}; to: ${p.x} ${p.y+0.25} ${p.z}; loop: true; easing: easeInOutSine`);
   orb.dataset.gaze = 'collect';
-  collectSpawner.appendChild(orb);
+  collectSpawner && collectSpawner.appendChild(orb);
 }
 
 function spawnDanger(){
@@ -71,21 +72,21 @@ function spawnDanger(){
   bad.setAttribute('position', `${p.x} ${Math.max(0.5,p.y-0.6)} ${p.z}`);
   bad.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
   bad.dataset.gaze = 'danger';
-  dangerSpawner.appendChild(bad);
+  dangerSpawner && dangerSpawner.appendChild(bad);
 }
 
-const MAX_ORBS_ON_SCREEN = 300;
-const MAX_DANGER_ON_SCREEN = 85;
+const MAX_ORBS_ON_SCREEN = 40;
+const MAX_DANGER_ON_SCREEN = 10;
 
 function startContinuousSpawns(){
   stopContinuousSpawns();
   state.intervals.orb = setInterval(()=>{
     if(!state.running || state.paused) return;
-    if(collectSpawner.children.length < MAX_ORBS_ON_SCREEN) spawnOrb();
+    if(collectSpawner && collectSpawner.children.length < MAX_ORBS_ON_SCREEN) spawnOrb();
   }, 800);
   state.intervals.danger = setInterval(()=>{
     if(!state.running || state.paused) return;
-    if(dangerSpawner.children.length < MAX_DANGER_ON_SCREEN) spawnDanger();
+    if(dangerSpawner && dangerSpawner.children.length < MAX_DANGER_ON_SCREEN) spawnDanger();
   }, 2000);
 }
 function stopContinuousSpawns(){
@@ -96,17 +97,19 @@ function stopContinuousSpawns(){
 
 // ---------------- Gaze logic ----------------
 let hovered = null;
-ray.addEventListener('raycaster-intersection', (e)=>{
-  const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i=>i.object.el));
-  const el = els && els.length ? els[0] : null;
-  if(el && el !== hovered){ if(hovered) clearHover(hovered); startHover(el); hovered = el; }
-});
-ray.addEventListener('raycaster-intersection-cleared', ()=>{
-  if(hovered) clearHover(hovered);
-  hovered = null;
-  reticle.setAttribute('color','#bfe5ff');
-  reticle.setAttribute('scale','1 1 1');
-});
+if (ray) {
+  ray.addEventListener('raycaster-intersection', (e)=>{
+    const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i=>i.object.el));
+    const el = els && els.length ? els[0] : null;
+    if(el && el !== hovered){ if(hovered) clearHover(hovered); startHover(el); hovered = el; }
+  });
+  ray.addEventListener('raycaster-intersection-cleared', ()=>{
+    if(hovered) clearHover(hovered);
+    hovered = null;
+    reticle.setAttribute('color','#bfe5ff');
+    reticle.setAttribute('scale','1 1 1');
+  });
+}
 
 function startHover(el){
   const kind = el.dataset && el.dataset.gaze ? el.dataset.gaze : null;
@@ -122,11 +125,11 @@ function startHover(el){
     if(!state.running || state.paused) return;
     if(kind==='collect'){
       const pos = el.object3D.position; particleBurst(pos);
-      document.getElementById('collectSound').play().catch(()=>{});
+      try { document.getElementById('collectSound').play().catch(()=>{}); } catch(_) {}
       el.parentNode && el.parentNode.removeChild(el);
       setScore(state.score+1);
     } else if(kind==='danger'){
-      document.getElementById('dangerSound').play().catch(()=>{});
+      try { document.getElementById('dangerSound').play().catch(()=>{}); } catch(_) {}
       triggerGameOver('Gazed at danger');
     }
   }, ms);
@@ -153,22 +156,22 @@ function particleBurst(pos){
 }
 
 // ---------------- Menu / game flow ----------------
-function openMenu(){ state.paused = true; overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false');
-                    showToast('Menu opened'); }
+function openMenu(){ state.paused = true; if (overlay) { overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false'); } showToast('Menu opened'); }
+
 function closeMenuSave(){
-    // ensure overlay is hidden and UI unblocked
-try {
-    overlay.style.display = 'none';
-    overlay.setAttribute('aria-hidden','true');
-  } catch(e){ console.warn('closeMenuSave overlay hide failed', e);
+  try {
+    if (overlay) { overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }
+  } catch(e){ console.warn('closeMenuSave overlay hide failed', e); }
+
   state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs;
   state.dangerGazeMs = parseInt(dangerInput.value)||state.dangerGazeMs;
+  state.paused = false;
   showToast('Settings saved');
 }
 
 function startRound(){
   clearInterval(state.roundTimer);
-  state.roundTime = 6000;
+  state.roundTime = 60;
   timeVal.textContent = state.roundTime;
   state.roundTimer = setInterval(()=>{
     if(!state.running || state.paused) return;
@@ -178,12 +181,10 @@ function startRound(){
   }, 1000);
 }
 
-function startGame(){// defensive: attempt to hide overlay even if earlier code failed
-  try { overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); } catch(e){}
-
-  closeMenuSave();  // still call to be safe
+function startGame(){ // defensive: ensure overlay hidden
+  try { if (overlay) { overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); } } catch(e){}
+  closeMenuSave();
   state.running = true; state.paused = false; setScore(0);
-  // seed a few objects
   for(let i=0;i<6;i++) spawnOrb();
   for(let i=0;i<3;i++) spawnDanger();
   startContinuousSpawns();
@@ -193,26 +194,26 @@ function startGame(){// defensive: attempt to hide overlay even if earlier code 
 
 function triggerGameOver(msg){
   state.running=false; state.paused=true; stopContinuousSpawns();
-  const panel=document.getElementById('gameOverPanel'); document.getElementById('gameOverText').setAttribute('value', msg);
-  panel.setAttribute('visible','true'); showToast('Game Over');
+  const panel=document.getElementById('gameOverPanel'); if (panel) panel.setAttribute('visible','true');
+  const got = document.getElementById('gameOverText'); if (got) got.setAttribute('value', msg);
+  showToast('Game Over');
 }
 
 function restart(){
   state.timers.forEach(t=>clearTimeout(t)); state.timers.clear();
-  Array.from(collectSpawner.children).forEach(c=>c.remove());
-  Array.from(dangerSpawner.children).forEach(d=>d.remove());
-  document.getElementById('gameOverPanel').setAttribute('visible','false');
+  if (collectSpawner) Array.from(collectSpawner.children).forEach(c=>c.remove());
+  if (dangerSpawner) Array.from(dangerSpawner.children).forEach(d=>d.remove());
+  const panel = document.getElementById('gameOverPanel'); if (panel) panel.setAttribute('visible','false');
   startGame();
 }
 
 // ---------------- UI wiring ----------------
-startBtn.addEventListener('click', startGame);
-saveBtn.addEventListener('click', closeMenuSave);
-restartBtnHtml.addEventListener('click', restart);
-openMenuBtn.addEventListener('click', openMenu);
-window.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='m') openMenu(); });
+startBtn && startBtn.addEventListener('click', startGame);
+saveBtn && saveBtn.addEventListener('click', closeMenuSave);
+restartBtnHtml && restartBtnHtml.addEventListener('click', restart);
+openMenuBtn && openMenuBtn.addEventListener('click', openMenu);
+window.addEventListener('keydown', (e)=>{ if(e.key && e.key.toLowerCase()==='m') openMenu(); });
 
 // On load
-overlay.style.display='block';
-overlay.setAttribute('aria-hidden','false');
+if (overlay) { overlay.style.display='block'; overlay.setAttribute('aria-hidden','false'); }
 setScore(0); timeVal.textContent = 60;
