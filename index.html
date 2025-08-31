@@ -58,8 +58,13 @@
 
   <!-- ======= A-Frame Scene (3D canvas) ======= -->
   <!-- IMPORTANT: id="scene" is required by the AR helper script -->
-  <a-scene id="scene" renderer="antialias:true" background="color:#030911"
-           webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #hud">
+  <a-scene
+  id="scene"
+  renderer="antialias: true; alpha: true"
+  background="color: transparent"
+  vr-mode-ui="enabled: false"
+  embedded
+>
     <a-assets>
       <!-- audio assets -->
       <audio id="collectSound" src="assets/audio/click.ogg"></audio>
