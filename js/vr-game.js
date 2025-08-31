@@ -156,7 +156,11 @@ function particleBurst(pos){
 function openMenu(){ state.paused = true; overlay.style.display = 'block'; overlay.setAttribute('aria-hidden','false');
                     showToast('Menu opened'); }
 function closeMenuSave(){
-  state.paused = false; overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true');
+    // ensure overlay is hidden and UI unblocked
+try {
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+  } catch(e){ console.warn('closeMenuSave overlay hide failed', e);
   state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs;
   state.dangerGazeMs = parseInt(dangerInput.value)||state.dangerGazeMs;
   showToast('Settings saved');
@@ -174,8 +178,10 @@ function startRound(){
   }, 1000);
 }
 
-function startGame(){
-  closeMenuSave();
+function startGame(){// defensive: attempt to hide overlay even if earlier code failed
+  try { overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); } catch(e){}
+
+  closeMenuSave();  // still call to be safe
   state.running = true; state.paused = false; setScore(0);
   // seed a few objects
   for(let i=0;i<6;i++) spawnOrb();
