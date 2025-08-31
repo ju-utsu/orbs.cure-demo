@@ -1,6 +1,8 @@
-/* css/style.css
-   Polished UI for Orbs.cure — HUD, menu overlay (glassy gradient), toast, AR/VR controls.
-*/
+/*Polished UI for Orbs.cure — HUD, menu overlay (glassy gradient), toast, AR/VR controls.*/
+
+html, body, a-scene, canvas {
+  background: transparent !important;
+}
 
 :root{
   --bg:#030911;
