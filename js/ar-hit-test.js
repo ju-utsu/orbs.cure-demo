@@ -1,5 +1,7 @@
+// js/ar-hit-test.js — cleaned & corrected version
+// Robust AR hit-test + spawn-on-tap logic for Tomato VR/AR project
 
-// DOM refs
+/* DOM refs (may be null if HTML missing elements) */
 const enterARBtn = document.getElementById('enterARBtn');
 const arStatus   = document.getElementById('arStatus');
 const arReticle  = document.getElementById('arReticle');
@@ -7,12 +9,12 @@ const sceneEl    = document.querySelector('a-scene');
 const collectSpawner = document.getElementById('collect-spawner');
 const toast = document.getElementById('toast');
 
-// XR state
+/* XR state */
 let xrSession = null;
 let xrRefSpace = null;
 let hitTestSource = null;
 
-// small helper toast/log
+/* Small helper toast/log */
 function showToast(msg, ms = 1500){
   if (!toast) { console.log('[TOAST]', msg); return; }
   toast.textContent = msg;
@@ -21,7 +23,13 @@ function showToast(msg, ms = 1500){
   toast._t = setTimeout(()=> toast.style.display = 'none', ms);
 }
 
-// Wait for A-Frame scene renderer to exist (resolves with renderer)
+/* AR status UI helper (was missing in original file) */
+function setArStatus(text, color = '#9fdfff'){
+  if (arStatus) { arStatus.textContent = text; arStatus.style.color = color; }
+  else console.log('[AR STATUS]', text);
+}
+
+/* Wait for A-Frame scene renderer to exist */
 function waitForSceneRenderer() {
   return new Promise((resolve) => {
     if (sceneEl && sceneEl.renderer) return resolve(sceneEl.renderer);
@@ -30,18 +38,19 @@ function waitForSceneRenderer() {
       return resolve(null);
     }
     sceneEl.addEventListener('loaded', () => {
-      // small delay to let renderer init
+      // short delay to let renderer initialize
       setTimeout(()=> resolve(sceneEl.renderer), 50);
     }, { once: true });
   });
 }
 
-// Show AR button if navigator.xr exists (optimistic)
-
+/* Setup AR button visibility & status text */
 function setupARButtonAndStatus() {
-  if (!enterARBtn) return;
+  if (!enterARBtn) {
+    setArStatus('AR UI not available (missing Enter AR button)', '#ffd880');
+    return;
+  }
 
-  // Default: hide, then decide
   enterARBtn.style.display = 'none';
   setArStatus('Checking WebXR availability...');
 
@@ -60,8 +69,8 @@ function setupARButtonAndStatus() {
           setArStatus('AR supported — tap Enter AR', '#9fffb3');
           enterARBtn.style.display = 'block';
         } else {
-          // Show optimistic button allowing user to try
-          setArStatus('AR not reported as supported by browser — you may still try (tap Enter AR)', '#ffd880');
+          // show optimistic button so user can still try
+          setArStatus('AR not reported as supported — you may still try (tap Enter AR)', '#ffd880');
           enterARBtn.style.display = 'block';
         }
       })
@@ -76,7 +85,7 @@ function setupARButtonAndStatus() {
   }
 }
 
-// spawn an orb at the given world position (pos is THREE-like {x,y,z})
+/* Spawn an orb at the given world position (pos = {x,y,z}) */
 function spawnOrbAtPosition(pos) {
   if (!pos) return;
   const orb = document.createElement('a-sphere');
@@ -109,7 +118,7 @@ function spawnOrbAtPosition(pos) {
   else sceneEl.appendChild(orb);
 }
 
-// spawn a danger box slightly around the reticle (used in AR)
+/* Spawn a danger box near a position */
 function spawnARDangerAt(pos) {
   if (!pos) return;
   const dx = (Math.random()-0.5)*0.6;
@@ -124,19 +133,21 @@ function spawnARDangerAt(pos) {
   sceneEl.appendChild(bad);
 }
 
-// optional: spawn a few AR objects around reticle
-function seedARObjects() {
+/* Seed a few AR objects around the reticle (called once AR active) */
+function seedARObjectsAroundReticle() {
   if (!arReticle) return;
   const p = arReticle.object3D.position;
-  for(let i=0;i<3;i++) spawnOrbAtPosition({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
-  for(let i=0;i<1;i++) spawnARDangerAt({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
+  for (let i=0; i<3; i++) spawnOrbAtPosition({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
+  for (let i=0; i<1; i++) spawnARDangerAt({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
 }
 
-// initialize & start AR session (hit-test)
+/* Initialize & start AR session (hit-test) */
 async function initAR() {
   if (!('xr' in navigator)) { alert('WebXR not supported in this browser'); return; }
 
   showToast('Requesting AR session...');
+  setArStatus('Requesting AR session...');
+
   try {
     xrSession = await navigator.xr.requestSession('immersive-ar', {
       requiredFeatures: ['hit-test'],
@@ -149,6 +160,7 @@ async function initAR() {
       throw new Error('A-Frame renderer not available');
     }
 
+    // make renderer clear so camera feed shows through (best-effort)
     try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); } catch(e){}
 
     if (renderer.xr && typeof renderer.xr.setSession === 'function') {
@@ -163,24 +175,25 @@ async function initAR() {
     const viewerSpace = await xrSession.requestReferenceSpace('viewer');
     hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
-    arReticle.setAttribute('visible', 'true');
+    if (arReticle) arReticle.setAttribute('visible', 'true');
     setArStatus('AR active — move device to detect surfaces', '#9fffb3');
     showToast('AR session started');
 
     xrSession.addEventListener('select', () => {
-      const pos = arReticle.object3D.position;
-      spawnOrbAtPosition(pos);
+      const pos = arReticle && arReticle.object3D ? arReticle.object3D.position : null;
+      if (pos) spawnOrbAtPosition(pos);
     });
 
     xrSession.addEventListener('end', () => {
-      arReticle.setAttribute('visible', 'false');
+      if (arReticle) arReticle.setAttribute('visible', 'false');
       hitTestSource = null;
       xrRefSpace = null;
       xrSession = null;
       showToast('AR session ended', 1250);
+      setArStatus('AR session ended', '#ffd880');
     });
 
-    seedARObjects();
+    seedARObjectsAroundReticle();
     xrSession.requestAnimationFrame(onXRFrame);
   } catch (err) {
     console.error('initAR failed:', err);
@@ -189,48 +202,26 @@ async function initAR() {
   }
 }
 
-
-function seedARObjectsAroundReticle() {
-  if (!arReticle) return;
-  const p = arReticle.object3D.position;
-  for (let i=0; i<3; i++) spawnOrbAtPosition({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
-  // optional danger
-  for (let i=0; i<1; i++) spawnARDangerAt({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
-}
-
-function spawnARDangerAt(pos) {
-  if (!pos) return;
-  const dx = (Math.random()-0.5)*0.6;
-  const dz = (Math.random()-0.5)*0.6;
-  const bad = document.createElement('a-box');
-  bad.classList.add('interactable');
-  bad.dataset.gaze = 'danger';
-  bad.setAttribute('width','0.36'); bad.setAttribute('height','0.36'); bad.setAttribute('depth','0.36');
-  bad.setAttribute('color','#d43b3b');
-  bad.setAttribute('position', `${pos.x + dx} ${pos.y} ${pos.z + dz}`);
-  bad.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 4200; loop:true; easing:linear');
-  sceneEl.appendChild(bad);
-}
-
-// per-frame hit-test -> update reticle
+/* per-frame hit-test -> update reticle */
 function onXRFrame(time, frame) {
   if (!xrSession) return;
   xrSession.requestAnimationFrame(onXRFrame);
-
   if (!hitTestSource || !xrRefSpace) return;
   const results = frame.getHitTestResults(hitTestSource);
   if (results.length > 0) {
     const pose = results[0].getPose(xrRefSpace);
     const p = pose.transform.position;
-    arReticle.object3D.position.set(p.x, p.y, p.z);
-    arReticle.object3D.updateMatrixWorld(true);
-    arReticle.setAttribute('visible', 'true');
+    if (arReticle && arReticle.object3D) {
+      arReticle.object3D.position.set(p.x, p.y, p.z);
+      arReticle.object3D.updateMatrixWorld(true);
+      arReticle.setAttribute('visible', 'true');
+    }
   } else {
-    arReticle.setAttribute('visible', 'false');
+    if (arReticle) arReticle.setAttribute('visible', 'false');
   }
 }
 
-// bootstrap (run early and reliably)
+/* Bootstrap */
 function bootstrapAR() {
   setupARButtonAndStatus();
   if (enterARBtn) enterARBtn.addEventListener('click', initAR);
