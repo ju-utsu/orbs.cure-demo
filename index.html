@@ -33,8 +33,11 @@
     </div>
   </div>
 
-    <!-- AR button (shown only if AR is supported) -->
-  <button id="enterARBtn" style="display:none;">Enter AR</button>
+    <!-- AR button + status (status visible to user) -->
+  <div id="arControls" style="position:fixed;right:12px;bottom:18px;z-index:60;text-align:right">
+    <button id="enterARBtn" style="display:none;padding:10px 12px;border-radius:10px;border:none;background:#1f9cff;color:#fff;font-weight:700;cursor:pointer">Enter AR</button>
+    <div id="arStatus" style="margin-top:8px;color:#9fdfff;font-size:12px;max-width:220px;text-align:right"></div>
+  </div>
 
   <!-- A-Frame Scene -->
   <a-scene renderer="antialias:true" background="color:#030911"
@@ -81,7 +84,7 @@
     <a-entity id="gameOverPanel" visible="false">
       <a-entity position="0 1.4 -1.2">
         <a-plane width="1.0" height="0.5" color="#200" material="opacity:0.95"></a-plane>
-        <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01"></a-text>
+        <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01" width="2"></a-text>
       </a-entity>
     </a-entity>
   </a-scene>
