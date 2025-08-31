@@ -1,6 +1,7 @@
 
 // DOM refs
 const enterARBtn = document.getElementById('enterARBtn');
+const arStatus   = document.getElementById('arStatus');
 const arReticle  = document.getElementById('arReticle');
 const sceneEl    = document.querySelector('a-scene');
 const collectSpawner = document.getElementById('collect-spawner');
@@ -36,33 +37,41 @@ function waitForSceneRenderer() {
 }
 
 // Show AR button if navigator.xr exists (optimistic)
-function setupARButton() {
+
+function setupARButtonAndStatus() {
   if (!enterARBtn) return;
+
+  // Default: hide, then decide
+  enterARBtn.style.display = 'none';
+  setArStatus('Checking WebXR availability...');
+
   if (!('xr' in navigator)) {
-    console.warn('navigator.xr not present — AR likely not available in this browser build.');
+    setArStatus('AR not available in this browser (navigator.xr missing)', '#ff8080');
     enterARBtn.style.display = 'none';
     return;
   }
 
-  enterARBtn.style.display = 'none';
+  setArStatus('navigator.xr found — checking immersive-ar support...');
 
   if (navigator.xr.isSessionSupported) {
     navigator.xr.isSessionSupported('immersive-ar')
       .then((supported) => {
         if (supported) {
+          setArStatus('AR supported — tap Enter AR', '#9fffb3');
           enterARBtn.style.display = 'block';
-          console.log('immersive-ar supported — showing AR button.');
         } else {
-          console.warn('immersive-ar reported unsupported; showing button optimistically for manual try.');
+          // Show optimistic button allowing user to try
+          setArStatus('AR not reported as supported by browser — you may still try (tap Enter AR)', '#ffd880');
           enterARBtn.style.display = 'block';
         }
       })
       .catch((err) => {
-        console.warn('isSessionSupported check failed:', err, '— showing AR button optimistically.');
+        console.warn('isSessionSupported failed:', err);
+        setArStatus('AR support check failed — tap Enter AR to try (see console)', '#ffd880');
         enterARBtn.style.display = 'block';
       });
   } else {
-    console.log('navigator.xr.isSessionSupported not present — showing AR button for manual try.');
+    setArStatus('Browser missing isSessionSupported — tap Enter AR to try', '#ffd880');
     enterARBtn.style.display = 'block';
   }
 }
@@ -155,7 +164,8 @@ async function initAR() {
     hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
     arReticle.setAttribute('visible', 'true');
-    showToast('AR ready — move camera to detect surfaces');
+    setArStatus('AR active — move device to detect surfaces', '#9fffb3');
+    showToast('AR session started');
 
     xrSession.addEventListener('select', () => {
       const pos = arReticle.object3D.position;
@@ -167,15 +177,39 @@ async function initAR() {
       hitTestSource = null;
       xrRefSpace = null;
       xrSession = null;
-      showToast('AR session ended', 1200);
+      showToast('AR session ended', 1250);
     });
 
     seedARObjects();
     xrSession.requestAnimationFrame(onXRFrame);
   } catch (err) {
     console.error('initAR failed:', err);
+    setArStatus('AR failed to start — check console', '#ff8080');
     showToast('AR failed to start — see console', 2500);
   }
+}
+
+
+function seedARObjectsAroundReticle() {
+  if (!arReticle) return;
+  const p = arReticle.object3D.position;
+  for (let i=0; i<3; i++) spawnOrbAtPosition({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
+  // optional danger
+  for (let i=0; i<1; i++) spawnARDangerAt({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
+}
+
+function spawnARDangerAt(pos) {
+  if (!pos) return;
+  const dx = (Math.random()-0.5)*0.6;
+  const dz = (Math.random()-0.5)*0.6;
+  const bad = document.createElement('a-box');
+  bad.classList.add('interactable');
+  bad.dataset.gaze = 'danger';
+  bad.setAttribute('width','0.36'); bad.setAttribute('height','0.36'); bad.setAttribute('depth','0.36');
+  bad.setAttribute('color','#d43b3b');
+  bad.setAttribute('position', `${pos.x + dx} ${pos.y} ${pos.z + dz}`);
+  bad.setAttribute('animation__rot','property: rotation; to: 0 360 0; dur: 4200; loop:true; easing:linear');
+  sceneEl.appendChild(bad);
 }
 
 // per-frame hit-test -> update reticle
@@ -196,8 +230,13 @@ function onXRFrame(time, frame) {
   }
 }
 
-// wire up the AR button after DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  setupARButton();
+// bootstrap (run early and reliably)
+function bootstrapAR() {
+  setupARButtonAndStatus();
   if (enterARBtn) enterARBtn.addEventListener('click', initAR);
-});
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapAR);
+} else {
+  bootstrapAR();
+}
