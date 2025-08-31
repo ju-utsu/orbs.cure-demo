@@ -1,20 +1,16 @@
-// js/ar-hit-test.js — cleaned & corrected version
-// Robust AR hit-test + spawn-on-tap logic for Tomato VR/AR project
+// js/ar-hit-test.js — robust AR support + visible status to user
 
-/* DOM refs (may be null if HTML missing elements) */
 const enterARBtn = document.getElementById('enterARBtn');
 const arStatus   = document.getElementById('arStatus');
 const arReticle  = document.getElementById('arReticle');
-const sceneEl    = document.querySelector('a-scene');
+const sceneEl    = document.getElementById('scene');
 const collectSpawner = document.getElementById('collect-spawner');
 const toast = document.getElementById('toast');
 
-/* XR state */
 let xrSession = null;
 let xrRefSpace = null;
 let hitTestSource = null;
 
-/* Small helper toast/log */
 function showToast(msg, ms = 1500){
   if (!toast) { console.log('[TOAST]', msg); return; }
   toast.textContent = msg;
@@ -22,14 +18,11 @@ function showToast(msg, ms = 1500){
   clearTimeout(toast._t);
   toast._t = setTimeout(()=> toast.style.display = 'none', ms);
 }
-
-/* AR status UI helper (was missing in original file) */
 function setArStatus(text, color = '#9fdfff'){
   if (arStatus) { arStatus.textContent = text; arStatus.style.color = color; }
   else console.log('[AR STATUS]', text);
 }
 
-/* Wait for A-Frame scene renderer to exist */
 function waitForSceneRenderer() {
   return new Promise((resolve) => {
     if (sceneEl && sceneEl.renderer) return resolve(sceneEl.renderer);
@@ -38,13 +31,11 @@ function waitForSceneRenderer() {
       return resolve(null);
     }
     sceneEl.addEventListener('loaded', () => {
-      // short delay to let renderer initialize
       setTimeout(()=> resolve(sceneEl.renderer), 50);
     }, { once: true });
   });
 }
 
-/* Setup AR button visibility & status text */
 function setupARButtonAndStatus() {
   if (!enterARBtn) {
     setArStatus('AR UI not available (missing Enter AR button)', '#ffd880');
@@ -69,14 +60,13 @@ function setupARButtonAndStatus() {
           setArStatus('AR supported — tap Enter AR', '#9fffb3');
           enterARBtn.style.display = 'block';
         } else {
-          // show optimistic button so user can still try
-          setArStatus('AR not reported as supported — you may still try (tap Enter AR)', '#ffd880');
+          setArStatus('AR not reported supported — try anyway (tap Enter AR)', '#ffd880');
           enterARBtn.style.display = 'block';
         }
       })
       .catch((err) => {
         console.warn('isSessionSupported failed:', err);
-        setArStatus('AR support check failed — tap Enter AR to try (see console)', '#ffd880');
+        setArStatus('AR support check failed — tap Enter AR to try', '#ffd880');
         enterARBtn.style.display = 'block';
       });
   } else {
@@ -85,7 +75,6 @@ function setupARButtonAndStatus() {
   }
 }
 
-/* Spawn an orb at the given world position (pos = {x,y,z}) */
 function spawnOrbAtPosition(pos) {
   if (!pos) return;
   const orb = document.createElement('a-sphere');
@@ -118,7 +107,6 @@ function spawnOrbAtPosition(pos) {
   else sceneEl.appendChild(orb);
 }
 
-/* Spawn a danger box near a position */
 function spawnARDangerAt(pos) {
   if (!pos) return;
   const dx = (Math.random()-0.5)*0.6;
@@ -133,7 +121,6 @@ function spawnARDangerAt(pos) {
   sceneEl.appendChild(bad);
 }
 
-/* Seed a few AR objects around the reticle (called once AR active) */
 function seedARObjectsAroundReticle() {
   if (!arReticle) return;
   const p = arReticle.object3D.position;
@@ -141,7 +128,6 @@ function seedARObjectsAroundReticle() {
   for (let i=0; i<1; i++) spawnARDangerAt({ x: p.x + (Math.random()-0.5)*0.5, y: p.y, z: p.z + (Math.random()-0.5)*0.5 });
 }
 
-/* Initialize & start AR session (hit-test) */
 async function initAR() {
   if (!('xr' in navigator)) { alert('WebXR not supported in this browser'); return; }
 
@@ -160,7 +146,6 @@ async function initAR() {
       throw new Error('A-Frame renderer not available');
     }
 
-    // make renderer clear so camera feed shows through (best-effort)
     try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); } catch(e){}
 
     if (renderer.xr && typeof renderer.xr.setSession === 'function') {
@@ -186,9 +171,7 @@ async function initAR() {
 
     xrSession.addEventListener('end', () => {
       if (arReticle) arReticle.setAttribute('visible', 'false');
-      hitTestSource = null;
-      xrRefSpace = null;
-      xrSession = null;
+      hitTestSource = null; xrRefSpace = null; xrSession = null;
       showToast('AR session ended', 1250);
       setArStatus('AR session ended', '#ffd880');
     });
@@ -202,7 +185,6 @@ async function initAR() {
   }
 }
 
-/* per-frame hit-test -> update reticle */
 function onXRFrame(time, frame) {
   if (!xrSession) return;
   xrSession.requestAnimationFrame(onXRFrame);
@@ -221,7 +203,6 @@ function onXRFrame(time, frame) {
   }
 }
 
-/* Bootstrap */
 function bootstrapAR() {
   setupARButtonAndStatus();
   if (enterARBtn) enterARBtn.addEventListener('click', initAR);
