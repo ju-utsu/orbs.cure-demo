@@ -18,7 +18,7 @@
   <div id="hud" role="region" aria-label="game heads up display">
     <span>Score: <strong id="scoreVal">0</strong></span>
     <span style="margin:0 8px">|</span>
-    <span>Time: <strong id="timeVal">60</strong>s</span>
+    <span>Time: <strong id="timeVal">360</strong>s</span>
     <button id="openMenuBtn" title="Open Settings" aria-haspopup="dialog">Settings</button>
   </div>
 
@@ -55,6 +55,36 @@
 
     <div id="arStatus" aria-live="polite" class="status-line"></div>
   </div>
+
+  <!-- MUSIC CONTROLS (insert inside #menuOverlay, e.g. after the .row buttons) -->
+<hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:10px 0;" />
+<div style="text-align:left;margin-top:6px;">
+  <label style="font-size:13px;margin-bottom:6px;display:block;">Background Music</label>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button id="prevTrack" class="menu-btn small">⟨</button>
+    <button id="playPauseMusic" class="menu-btn small">Play</button>
+    <button id="nextTrack" class="menu-btn small">⟩</button>
+    <select id="bgSelect" style="flex:1;padding:6px;border-radius:6px;background:#0f1520;color:#fff;border:1px solid #333;">
+      <option value="bg1.mp3">Cornfield Chase</option>
+      <option value="bg2.mp3">Running Out</option>
+      <option value="bg3.mp3">Stay</option>
+      <option value="bg4.mp3">Coward</option>
+      <option value="bg5.mp3">S.T.A.Y</option>
+      <option value="bg6.mp3">Wormhole</option>
+      <option value="bg7.mp3">Dust</option>
+      <option value="bg8.mp3">Detach</option>
+      <option value="bg9.mp3">Mountains</option>
+      <option value="bg10.mp3">Where We're Going</option>
+      <option value="bg11.mp3">Day One</option>
+      <option value="bg.mp3">Afraid of Time</option>
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+    <label style="font-size:12px;">Volume</label>
+    <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.6" style="width:160px;" />
+    <span id="musicLabel" style="font-size:12px;width:38px;text-align:right;">60%</span>
+  </div>
+</div>
 
   <!-- ======= A-Frame Scene (3D canvas) ======= -->
   <a-scene
