@@ -1,4 +1,3 @@
-// js/vr-game.js — cleaned / fixed version
 // Robust gaze-based orb collector (uses A-Frame raycaster events, stable spawners, HUD updates)
 
 // ==============================
