@@ -28,7 +28,7 @@
   const fixedPlacements = [];
 
   // UI helpers
-  function showToast(msg, ms = 1400){ if(!toast){ console.log('[TOAST]', msg); return; } toast.textContent = msg; toast.style.display='block'; clearTimeout(toast._t); toast._t = setTimeout(()=> toast.style.display='none', ms); }
+  function showToast(msg, ms = 1500){ if(!toast){ console.log('[TOAST]', msg); return; } toast.textContent = msg; toast.style.display='block'; clearTimeout(toast._t); toast._t = setTimeout(()=> toast.style.display='none', ms); }
   function setArStatus(text, color='#9fdfff'){ if(arStatus){ arStatus.textContent = text; arStatus.style.color = color; } else console.log('[AR STATUS]', text); }
   function enableARBtn(text='Enter AR'){ if(!enterARBtn) return; enterARBtn.disabled=false; enterARBtn.style.pointerEvents='auto'; enterARBtn.style.display='inline-block'; enterARBtn.textContent = text; }
   function disableARBtn(label='Starting AR...'){ if(!enterARBtn) return; enterARBtn.disabled=true; enterARBtn.style.pointerEvents='none'; if(label) enterARBtn.textContent = label; }
