@@ -8,7 +8,6 @@ html, body, a-scene, canvas {
   --bg:#030911;
   --glass-1: rgba(255,255,255,0.035);
   --glass-2: rgba(255,255,255,0.01);
-  --glass-3: rgba(255,255,255,0.02);
   --panel-bg: rgba(12,16,22,0.55);
   --accent: #1f9cff;
   --accent-2: #6ec1ff;
@@ -92,6 +91,7 @@ a-scene{ display:block; width:100vw; height:100vh; }
   border: 1px solid rgba(255,255,255,0.03);
   transition: opacity .22s ease, transform .22s ease;
   display:block;
+  pointer-events:auto;
 }
 
 /* Decorative subtle radial glow for the overlay (gives a neon grid feel) */
@@ -221,3 +221,67 @@ button:focus, input:focus{
 
 /* Make A-Frame interactable elements show pointer cursor on desktop */
 .interactable{ cursor:pointer; }
+
+/* === Music Player Premium Styling (added) === */
+.music-panel {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  backdrop-filter: blur(6px) saturate(1.05);
+}
+.music-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #dff6ff;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.music-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.music-btn {
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 4px 10px rgba(31,156,255,0.18);
+  transition: transform 0.18s ease;
+}
+.music-btn:hover {
+  transform: scale(1.06);
+}
+.music-nowplaying {
+  text-align: center;
+  font-size: 13px;
+  color: #bff5ff;
+  opacity: 0.95;
+}
+
+/* Ensure overlays sit above canvas; allow canvas to be interactive only when needed */
+a-scene, a-scene .a-canvas, a-scene canvas {
+  position: fixed !important;
+  left: 0;
+  top: 0;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+  pointer-events: none; /* DOM overlays receive pointer events by default */
+}
+
+/* Allow enabling canvas interactions when necessary via `.scene-interactive` on body */
+.scene-interactive a-scene, .scene-interactive a-scene canvas { pointer-events: auto; }
+
+/* Toast top */
+#toast { z-index: 10002; }
