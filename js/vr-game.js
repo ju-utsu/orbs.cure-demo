@@ -22,15 +22,10 @@ const musicManager = (function () {
 
   let audio = null;
   let tracks = defaultTracks.slice();
-  let currentIndex = 0;
+  let index = 0;
   let isPlaying = false;
 
-  const savedIndex = parseInt(localStorage.getItem('orbs_bg_index'));
-  const savedVol = parseFloat(localStorage.getItem('orbs_bg_vol'));
-  if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < tracks.length) currentIndex = savedIndex;
-  const initialVol = (!isNaN(savedVol) ? savedVol : 0.6);
-
-  function createAudio() {
+  function create() {
     if (audio) return;
     audio = new Audio();
     audio.loop = true;
@@ -47,31 +42,24 @@ const musicManager = (function () {
     const sel = document.getElementById('bgSelect');
     const label = document.getElementById('musicLabel');
     if (btn) btn.textContent = isPlaying ? 'Pause' : 'Play';
-    if (sel) sel.selectedIndex = currentIndex;
+    if (sel) sel.selectedIndex = index;
     if (label && audio) label.textContent = Math.round(audio.volume * 100) + '%';
+    if (now) now.textContent = `Now: ${tracks[index] ? tracks[index].title : '—'}`;
   }
 
-  function loadTrack(index) {
+  function loadTrack(i) {
     createAudio();
-    if (index < 0) index = 0;
-    if (index >= tracks.length) index = tracks.length - 1;
-    currentIndex = index;
-    audio.src = basePath + tracks[currentIndex].file;
-    localStorage.setItem('orbs_bg_index', currentIndex);
+    index = Math.max(0, Math.min(i, tracks.length - 1));
+    audio.src = basePath + tracks[index].file;
     updateUI();
   }
 
   function play() {
     createAudio();
-    if (!audio.src) loadTrack(currentIndex);
+    if (!audio.src) loadTrack(index);
     const p = audio.play();
     if (p && typeof p.then === 'function') {
-      p.then(() => { isPlaying = true; updateUI(); }).catch((e) => {
-        console.warn('Music play blocked (requires user gesture):', e);
-        isPlaying = false; updateUI();
-      });
-    } else {
-      isPlaying = true; updateUI();
+      p.catch(e => console.warn('Playback blocked:', e));
     }
   }
 
@@ -104,7 +92,7 @@ const musicManager = (function () {
     if (sel) {
       // populate options if they don't exist (safe)
       sel.innerHTML = '';
-      tracks.forEach((t, i) => {
+      tracks.forEach(t, => {
         const opt = document.createElement('option');
         opt.value = t.file;
         opt.textContent = t.title;
@@ -123,31 +111,16 @@ const musicManager = (function () {
     if (prevBtn) prevBtn.addEventListener('click', () => { prev(); });
 
     if (vol) {
-      vol.value = (audio ? audio.volume : initialVol);
-      const label = document.getElementById('musicLabel');
-      vol.addEventListener('input', () => {
-        setVolume(vol.value);
-        if (label) label.textContent = Math.round(vol.value * 100) + '%';
-      });
+      vol.value = (audio ? audio.volume : 0.6;
+      vol.addEventListener('input', () => setVol(vol.value));
     }
-
     updateUI();
   }
 
   return {
-    init: function () {
-      createAudio();
-      loadTrack(currentIndex);
-      initUIBindings();
-    },
-    play,
-    pause,
-    toggle,
-    next,
-    prev,
-    setVolume,
-    isPlaying: () => isPlaying,
-    getCurrent: () => tracks[currentIndex]
+    init: () => { create(); load(index); bindUI(); },
+    play, pause, toggle, next, prev, setVol,
+    isPlaying: () => !!(audio && !audio.paused)
   };
 })();
 window.musicManager = musicManager;
@@ -156,7 +129,8 @@ window.musicManager = musicManager;
 // Game code (IIFE) - clean structure
 // ==============================
 
-  // ---------------- state ----------------
+  // ---------------- Game state ----------------
+const game = (function () {
   const state = {
     running: false,
     paused: true,
@@ -214,7 +188,7 @@ window.musicManager = musicManager;
     return { x: Math.cos(a) * r, y, z: Math.sin(a) * r };
   }
 
-  function spawnOrb(p) {
+  function spawnOrb() {
     const p = randPosAroundPlayer();
     const orb = document.createElement('a-sphere');
     orb.classList.add('interactable', 'collectable');
@@ -274,7 +248,7 @@ window.musicManager = musicManager;
     if(el && el !== hovered){ if(hovered) clearHover(hovered); startHover(el); hovered = el; }
   });
     ray.addEventListener('raycaster-intersection-cleared', () => {
-      if (hoveredEl) clearHover(hovered);
+      if (hovered) clearHover(hovered);
     hovered = null;
     if (reticle) { reticle.setAttribute('color', '#bfe5ff'); reticle.setAttribute('scale', '1 1 1'); }
   });
@@ -299,7 +273,7 @@ window.musicManager = musicManager;
 
       if (kind === 'collect') {
         try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch(_) {}
-        const pos = el.object3D.position;
+        const pos = el.object3D.position(pos);
         particleBurst(pos);
         el.parentNode && el.parentNode.removeChild(el);
         setScore(state.score + 1);
@@ -422,15 +396,15 @@ openMenuBtn && openMenuBtn.addEventListener('click', ()=>{ openMenu();
   });
 
   // Initialize music UI bindings on DOM ready (no autoplay)
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>{ try{ musicManager.init(); }catch(e){} });
-    else try { musicManager.init(); } catch (e) { /* ignore */ }
-    // ensure overlay visible at load
-    if (overlay) {
-      overlay.style.display = 'block';
-      overlay.setAttribute('aria-hidden', 'false');
-      overlay.style.pointerEvents = 'auto';
-    }
+    if (startBtn) startBtn.addEventListener('click', () => { try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); } startGame(); });
+  if (saveBtn) saveBtn.addEventListener('click', () => { closeMenuSave(); try { musicManager.init(); musicManager.play(); } catch (e) {} });
+  if (restartBtn) restartBtn.addEventListener('click', restart);
+  if (openMenuBtn) openMenuBtn.addEventListener('click', openMenu);
+
+  // init
+  document.addEventListener('DOMContentLoaded', () => { try { musicManager.init(); } catch (e) {}
 
   // expose helpers for debug (console)
   window._orbsGame = { startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver };
+    return state;
 })();
