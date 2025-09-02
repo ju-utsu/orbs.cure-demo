@@ -1,5 +1,156 @@
 //// Robust gaze-based orb collector (uses A-Frame raycaster events, stable spawners, HUD updates)
 
+// ==============================
+// Background music manager (non-invasive)
+// ==============================
+const musicManager = (function () {
+  const basePath = 'assets/audio/';
+  const defaultTracks = [
+    { file: 'bg1.mp3', title: 'Cornfield Chase' },
+    { file: 'bg2.mp3', title: 'Running Out' },
+    { file: 'bg3.mp3', title: 'Stay' },
+    { file: 'bg4.mp3', title: 'Coward' },
+    { file: 'bg5.mp3', title: 'S.T.A.Y' },
+    { file: 'bg6.mp3', title: 'Wormhole' },
+    { file: 'bg7.mp3', title: 'Dust' },
+    { file: 'bg8.mp3', title: 'Detach' },
+    { file: 'bg9.mp3', title: 'Mountains' },
+    { file: 'bg10.mp3', title: "Where We're Going" },
+    { file: 'bg11.mp3', title: "Day One" },
+    { file: 'bg.mp3', title: 'Afraid of Time' }
+  ];
+
+  let audio = null;
+  let tracks = defaultTracks.slice();
+  let currentIndex = 0;
+  let isPlaying = false;
+
+  const savedIndex = parseInt(localStorage.getItem('orbs_bg_index'));
+  const savedVol = parseFloat(localStorage.getItem('orbs_bg_vol'));
+  if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < tracks.length) currentIndex = savedIndex;
+  const initialVol = (!isNaN(savedVol) ? savedVol : 0.6);
+
+  function createAudio() {
+    if (audio) return;
+    audio = new Audio();
+    audio.loop = true;
+    audio.crossOrigin = 'anonymous';
+    audio.volume = initialVol;
+    audio.preload = 'auto';
+    audio.addEventListener('ended', () => { isPlaying = false; updateUI(); });
+    audio.addEventListener('play', () => { isPlaying = true; updateUI(); });
+    audio.addEventListener('pause', () => { isPlaying = false; updateUI(); });
+  }
+
+  function updateUI() {
+    const btn = document.getElementById('playPauseMusic');
+    const sel = document.getElementById('bgSelect');
+    const label = document.getElementById('musicLabel');
+    if (btn) btn.textContent = isPlaying ? 'Pause' : 'Play';
+    if (sel) sel.selectedIndex = currentIndex;
+    if (label && audio) label.textContent = Math.round(audio.volume * 100) + '%';
+  }
+
+  function loadTrack(index) {
+    createAudio();
+    if (index < 0) index = 0;
+    if (index >= tracks.length) index = tracks.length - 1;
+    currentIndex = index;
+    audio.src = basePath + tracks[currentIndex].file;
+    localStorage.setItem('orbs_bg_index', currentIndex);
+    updateUI();
+  }
+
+  function play() {
+    createAudio();
+    if (!audio.src) loadTrack(currentIndex);
+    const p = audio.play();
+    if (p && typeof p.then === 'function') {
+      p.then(()=>{ isPlaying = true; updateUI(); }).catch((e)=>{
+        console.warn('Music play blocked (requires user gesture):', e);
+        isPlaying = false; updateUI();
+      });
+    } else {
+      isPlaying = true; updateUI();
+    }
+  }
+
+  function pause() {
+    if (audio) audio.pause();
+    isPlaying = false;
+    updateUI();
+  }
+
+  function toggle() {
+    if (!audio || audio.paused) play(); else pause();
+  }
+
+  function next() { loadTrack((currentIndex + 1) % tracks.length); if (isPlaying) play(); }
+  function prev() { loadTrack((currentIndex - 1 + tracks.length) % tracks.length); if (isPlaying) play(); }
+  function setVolume(v) {
+    createAudio();
+    audio.volume = Math.max(0, Math.min(1, parseFloat(v)));
+    localStorage.setItem('orbs_bg_vol', audio.volume);
+    updateUI();
+  }
+
+  function initUIBindings() {
+    const sel = document.getElementById('bgSelect');
+    const playBtn = document.getElementById('playPauseMusic');
+    const nextBtn = document.getElementById('nextTrack');
+    const prevBtn = document.getElementById('prevTrack');
+    const vol = document.getElementById('musicVol');
+
+    if (sel) {
+      sel.innerHTML = '';
+      tracks.forEach((t, i) => {
+        const opt = document.createElement('option');
+        opt.value = t.file;
+        opt.textContent = t.title;
+        sel.appendChild(opt);
+      });
+      sel.selectedIndex = currentIndex;
+      sel.addEventListener('change', (e) => {
+        const idx = sel.selectedIndex;
+        loadTrack(idx);
+        try { play(); } catch (_) {}
+      });
+    }
+
+    if (playBtn) playBtn.addEventListener('click', () => { toggle(); });
+    if (nextBtn) nextBtn.addEventListener('click', () => { next(); });
+    if (prevBtn) prevBtn.addEventListener('click', () => { prev(); });
+
+    if (vol) {
+      vol.value = (audio ? audio.volume : initialVol);
+      const label = document.getElementById('musicLabel');
+      vol.addEventListener('input', () => {
+        setVolume(vol.value);
+        if (label) label.textContent = Math.round(vol.value * 100) + '%';
+      });
+    }
+
+    updateUI();
+  }
+
+  return {
+    init: function () {
+      createAudio();
+      loadTrack(currentIndex);
+      initUIBindings();
+    },
+    play,
+    pause,
+    toggle,
+    next,
+    prev,
+    setVolume,
+    isPlaying: ()=> isPlaying,
+    getCurrent: ()=> tracks[currentIndex]
+  };
+})();
+window.musicManager = musicManager;
+
 (function () {
   // ---------------- state ----------------
   const state = {
@@ -10,7 +161,7 @@
     dangerGazeMs: 500,
     timers: new Map(),
     roundTimer: null,
-    roundTime: 60,
+    roundTime: 360,
     spawnIntervals: { orb: null, danger: null }
   };
   window.state = state; // for debug & AR
@@ -86,8 +237,8 @@
     return bad;
   }
 
-  const MAX_ORBS_ON_SCREEN = 40;
-  const MAX_DANGER_ON_SCREEN = 12;
+  const MAX_ORBS_ON_SCREEN = 42;
+  const MAX_DANGER_ON_SCREEN = 21;
 
   function startSpawners() {
     stopSpawners();
@@ -200,7 +351,7 @@
 
   function startRoundTimer() {
     clearInterval(state.roundTimer);
-    state.roundTime = 60;
+    state.roundTime = 360;
     if (timeVal) timeVal.textContent = state.roundTime;
     state.roundTimer = setInterval(() => {
       if (!state.running || state.paused) return;
@@ -259,6 +410,16 @@
     startGame();
   }
 
+  // Start music (attempt) — user gesture allows playback
+  try { musicManager.init(); musicManager.play(); } catch(e){ console.warn('Music play failed', e); }
+});
+
+openMenuBtn.addEventListener('click', () => {
+  showMenu(true);
+  try { musicManager.init(); } catch(e){}
+});
+
+
   // ---------------- UI wiring ----------------
   startBtn && startBtn.addEventListener('click', startGame);
   saveBtn && saveBtn.addEventListener('click', () => {
@@ -268,6 +429,10 @@
   });
   restartBtn && restartBtn.addEventListener('click', restartGame);
   openMenuBtn && openMenuBtn.addEventListener('click', showOverlay);
+
+  if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => { try { musicManager.init(); } catch(e){} });
+} else { try { musicManager.init(); } catch(e){} }
 
   // ensure overlay initially visible for settings
   if (overlay) {
