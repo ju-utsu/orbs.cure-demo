@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0, viewport-fit=cover" />
   <title>Orbs.cure✨</title>
 
   <!-- site CSS -->
@@ -79,10 +79,13 @@
       <option value="bg.mp3">Afraid of Time</option>
     </select>
   </div>
+  
+  <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;">
+        <div class="music-nowplaying" id="nowPlaying">Now: —</div>
   <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-    <label style="font-size:12px;">Volume</label>
-    <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.6" style="width:160px;" />
-    <span id="musicLabel" style="font-size:12px;width:38px;text-align:right;">60%</span>
+    <label for="musicVol" style="font-size:12px;margin-right:6px;">Volume</label>
+    <input id="musicVol" type="range" min="0" max="1" step="0.01" value="0.6" style="width:160px; aria-label="Music volume" />
+    <span id="musicLabel" style="width:40px;text-align:right;font-weight:700;color:#dbefff;">50%</span>
   </div>
 </div>
 
