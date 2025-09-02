@@ -103,14 +103,13 @@ const musicManager = (function () {
 
     if (sel) {
       // populate options if they don't exist (safe)
-      if (sel.options.length === 0) {
-        tracks.forEach((t, i) => {
-          const opt = document.createElement('option');
-          opt.value = t.file;
-          opt.textContent = t.title;
-          sel.appendChild(opt);
-        });
-      }
+      sel.innerHTML = '';
+      tracks.forEach((t, i) => {
+        const opt = document.createElement('option');
+        opt.value = t.file;
+        opt.textContent = t.title;
+        sel.appendChild(opt);
+      });
       sel.selectedIndex = currentIndex;
       sel.addEventListener('change', () => {
         const idx = sel.selectedIndex;
@@ -156,7 +155,7 @@ window.musicManager = musicManager;
 // ==============================
 // Game code (IIFE) - clean structure
 // ==============================
-(function () {
+
   // ---------------- state ----------------
   const state = {
     running: false,
@@ -182,6 +181,7 @@ window.musicManager = musicManager;
   const saveBtn = document.getElementById('saveSettings');
   const restartBtn = document.getElementById('restartBtn');
   const openMenuBtn = document.getElementById('openMenuBtn');
+  const enterARBtnUI = document.getElementById('enterARBtn');
 
   const collectSpawner = document.getElementById('collect-spawner');
   const dangerSpawner = document.getElementById('danger-spawner');
@@ -190,7 +190,7 @@ window.musicManager = musicManager;
 
   // ---------------- helpers ----------------
   function showToast(msg, ms = 1200) {
-    if (!toast) { console.log('[TOAST]', msg); return; }
+    if (!toast) { console.log('[TOAST]', msg); 
     toast.textContent = msg;
     toast.hidden = false;
     toast.style.display = 'block';
@@ -214,7 +214,7 @@ window.musicManager = musicManager;
     return { x: Math.cos(a) * r, y, z: Math.sin(a) * r };
   }
 
-  function spawnOrb() {
+  function spawnOrb(p) {
     const p = randPosAroundPlayer();
     const orb = document.createElement('a-sphere');
     orb.classList.add('interactable', 'collectable');
@@ -228,7 +228,7 @@ window.musicManager = musicManager;
     return orb;
   }
 
-  function spawnDanger() {
+  function spawnDanger(p) {
     const p = randPosAroundPlayer();
     const bad = document.createElement('a-box');
     bad.classList.add('interactable', 'danger');
@@ -266,22 +266,19 @@ window.musicManager = musicManager;
   }
 
   // ---------------- gaze using A-Frame raycaster events ----------------
-  let hoveredEl = null;
-  ray && ray.addEventListener('raycaster-intersection', (evt) => {
-    const els = evt.detail.els || (evt.detail.intersections && evt.detail.intersections.map(i => i.object.el));
+  let hovered = null;
+  if (ray){
+    ray.addEventListener('raycaster-intersection', (e)=>{
+    const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i => i.object.el));
     const el = els && els.length ? els[0] : null;
-    if (!el) return;
-    if (el === hoveredEl) return;
-    if (hoveredEl) clearHover(hoveredEl);
-    startHover(el);
-    hoveredEl = el;
+    if(el && el !== hovered){ if(hovered) clearHover(hovered); startHover(el); hovered = el; }
   });
-
-  ray && ray.addEventListener('raycaster-intersection-cleared', () => {
-    if (hoveredEl) clearHover(hoveredEl);
-    hoveredEl = null;
+    ray.addEventListener('raycaster-intersection-cleared', () => {
+      if (hoveredEl) clearHover(hovered);
+    hovered = null;
     if (reticle) { reticle.setAttribute('color', '#bfe5ff'); reticle.setAttribute('scale', '1 1 1'); }
   });
+}
 
   function startHover(el) {
     const kind = el && el.dataset && el.dataset.gaze ? el.dataset.gaze : null;
@@ -338,25 +335,28 @@ window.musicManager = musicManager;
   }
 
   // ---------------- game flow ----------------
-  function showOverlay() {
+  function openMenu() {
     if (!overlay) return;
     overlay.setAttribute('aria-hidden', 'false');
     overlay.style.opacity = '1';
     overlay.style.pointerEvents = 'auto';
     state.paused = true;
+    showToast('Menu opened');
   }
-  function hideOverlay() {
+    
+  function closeMenuSave() {
     if (!overlay) return;
     overlay.setAttribute('aria-hidden', 'true');
     overlay.style.opacity = '0';
     overlay.style.pointerEvents = 'none';
     state.paused = false;
+    state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs; state.dangerGazeMs = parseInt(dangerInput.value)||state.dangerGazeMs; showToast('Settings saved'); }
   }
 
   function startRoundTimer() {
     clearInterval(state.roundTimer);
     state.roundTime = 360;
-    if (timeVal) timeVal.textContent = state.roundTime;
+    timeVal.textContent = state.roundTime;
     state.roundTimer = setInterval(() => {
       if (!state.running || state.paused) return;
       state.roundTime -= 1;
@@ -366,17 +366,10 @@ window.musicManager = musicManager;
   }
 
   function startGame() {
-    // apply saved inputs
-    state.orbGazeMs = parseInt(orbInput.value) || state.orbGazeMs;
-    state.dangerGazeMs = parseInt(dangerInput.value) || state.dangerGazeMs;
-
-    // reset timers and state
-    state.timers.forEach(t => clearTimeout(t));
-    state.timers.clear();
+    closeMenuSave();
     state.running = true;
     state.paused = false;
     setScore(0);
-    hideOverlay();
 
     // seed initial objects
     for (let i = 0; i < 6; i++) spawnOrb();
@@ -399,7 +392,7 @@ window.musicManager = musicManager;
     if (got) got.setAttribute('value', msg);
     showToast(msg);
     // re-open menu so player can restart
-    showOverlay();
+    openMenu();
   }
 
   function restartGame() {
@@ -421,28 +414,22 @@ window.musicManager = musicManager;
     startGame();
   });
 
-  saveBtn && saveBtn.addEventListener('click', () => {
-    state.orbGazeMs = parseInt(orbInput.value) || state.orbGazeMs;
-    state.dangerGazeMs = parseInt(dangerInput.value) || state.dangerGazeMs;
+  saveBtn && saveBtn.addEventListener('click', () => {closeMenuSave(); try{ musicManager.init(); musicManager.play(); }catch(e){} });
+restartBtn && restartBtn.addEventListener('click', restart);
+openMenuBtn && openMenuBtn.addEventListener('click', ()=>{ openMenu();
     showToast('Settings saved');
     try { musicManager.init(); } catch(e){}
   });
 
-  restartBtn && restartBtn.addEventListener('click', restartGame);
-  openMenuBtn && openMenuBtn.addEventListener('click', showOverlay);
-
   // Initialize music UI bindings on DOM ready (no autoplay)
-  function initOnReady() {
-    try { musicManager.init(); } catch (e) { /* ignore */ }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>{ try{ musicManager.init(); }catch(e){} });
+    else try { musicManager.init(); } catch (e) { /* ignore */ }
     // ensure overlay visible at load
     if (overlay) {
       overlay.style.display = 'block';
       overlay.setAttribute('aria-hidden', 'false');
       overlay.style.pointerEvents = 'auto';
     }
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initOnReady);
-  else initOnReady();
 
   // expose helpers for debug (console)
   window._orbsGame = { startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver };
