@@ -164,6 +164,18 @@ button.primary{
   min-width:86px;
 }
 
+/* Music controls small styles (menu overlay) */
+.menu-btn.small {
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 6px;
+  background: #0a84ff;
+  color: #fff;
+  border: none;
+}
+#menuOverlay hr { opacity: 0.06; margin: 12px 0; }
+
 /* small status line for AR status */
 .status-line{
   margin-top:10px;
