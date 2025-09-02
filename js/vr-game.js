@@ -1,4 +1,5 @@
-//// Robust gaze-based orb collector (uses A-Frame raycaster events, stable spawners, HUD updates)
+// js/vr-game.js — cleaned / fixed version
+// Robust gaze-based orb collector (uses A-Frame raycaster events, stable spawners, HUD updates)
 
 // ==============================
 // Background music manager (non-invasive)
@@ -66,7 +67,7 @@ const musicManager = (function () {
     if (!audio.src) loadTrack(currentIndex);
     const p = audio.play();
     if (p && typeof p.then === 'function') {
-      p.then(()=>{ isPlaying = true; updateUI(); }).catch((e)=>{
+      p.then(() => { isPlaying = true; updateUI(); }).catch((e) => {
         console.warn('Music play blocked (requires user gesture):', e);
         isPlaying = false; updateUI();
       });
@@ -102,15 +103,17 @@ const musicManager = (function () {
     const vol = document.getElementById('musicVol');
 
     if (sel) {
-      sel.innerHTML = '';
-      tracks.forEach((t, i) => {
-        const opt = document.createElement('option');
-        opt.value = t.file;
-        opt.textContent = t.title;
-        sel.appendChild(opt);
-      });
+      // populate options if they don't exist (safe)
+      if (sel.options.length === 0) {
+        tracks.forEach((t, i) => {
+          const opt = document.createElement('option');
+          opt.value = t.file;
+          opt.textContent = t.title;
+          sel.appendChild(opt);
+        });
+      }
       sel.selectedIndex = currentIndex;
-      sel.addEventListener('change', (e) => {
+      sel.addEventListener('change', () => {
         const idx = sel.selectedIndex;
         loadTrack(idx);
         try { play(); } catch (_) {}
@@ -145,12 +148,15 @@ const musicManager = (function () {
     next,
     prev,
     setVolume,
-    isPlaying: ()=> isPlaying,
-    getCurrent: ()=> tracks[currentIndex]
+    isPlaying: () => isPlaying,
+    getCurrent: () => tracks[currentIndex]
   };
 })();
 window.musicManager = musicManager;
 
+// ==============================
+// Game code (IIFE) - clean structure
+// ==============================
 (function () {
   // ---------------- state ----------------
   const state = {
@@ -164,7 +170,7 @@ window.musicManager = musicManager;
     roundTime: 360,
     spawnIntervals: { orb: null, danger: null }
   };
-  window.state = state; // for debug & AR
+  window.state = state; // expose for AR debug
 
   // ---------------- DOM refs ----------------
   const scoreVal = document.getElementById('scoreVal');
@@ -187,9 +193,10 @@ window.musicManager = musicManager;
   function showToast(msg, ms = 1200) {
     if (!toast) { console.log('[TOAST]', msg); return; }
     toast.textContent = msg;
+    toast.hidden = false;
     toast.style.display = 'block';
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => toast.style.display = 'none', ms);
+    toast._t = setTimeout(() => { toast.style.display = 'none'; toast.hidden = true; }, ms);
   }
   function setScore(v) {
     state.score = v;
@@ -226,19 +233,19 @@ window.musicManager = musicManager;
     const p = randPosAroundPlayer();
     const bad = document.createElement('a-box');
     bad.classList.add('interactable', 'danger');
+    bad.dataset.gaze = 'danger';
     bad.setAttribute('width', '0.5');
     bad.setAttribute('height', '0.5');
     bad.setAttribute('depth', '0.5');
     bad.setAttribute('color', '#d43b3b');
     bad.setAttribute('position', `${p.x} ${Math.max(0.5, p.y - 0.6)} ${p.z}`);
     bad.setAttribute('animation__rot', 'property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
-    bad.dataset.gaze = 'danger';
     (dangerSpawner || document.querySelector('a-scene')).appendChild(bad);
     return bad;
   }
 
-  const MAX_ORBS_ON_SCREEN = 42;
-  const MAX_DANGER_ON_SCREEN = 21;
+  const MAX_ORBS_ON_SCREEN = 21; // **user requested**
+  const MAX_DANGER_ON_SCREEN = 8;
 
   function startSpawners() {
     stopSpawners();
@@ -246,12 +253,12 @@ window.musicManager = musicManager;
       if (!state.running || state.paused) return;
       const count = collectSpawner ? collectSpawner.children.length : document.querySelectorAll('.collectable').length;
       if (count < MAX_ORBS_ON_SCREEN) spawnOrb();
-    }, 700);
+    }, 800);
     state.spawnIntervals.danger = setInterval(() => {
       if (!state.running || state.paused) return;
       const count = dangerSpawner ? dangerSpawner.children.length : document.querySelectorAll('.danger').length;
       if (count < MAX_DANGER_ON_SCREEN) spawnDanger();
-    }, 2200);
+    }, 1800);
   }
   function stopSpawners() {
     if (state.spawnIntervals.orb) clearInterval(state.spawnIntervals.orb);
@@ -271,7 +278,7 @@ window.musicManager = musicManager;
     hoveredEl = el;
   });
 
-  ray && ray.addEventListener('raycaster-intersection-cleared', (evt) => {
+  ray && ray.addEventListener('raycaster-intersection-cleared', () => {
     if (hoveredEl) clearHover(hoveredEl);
     hoveredEl = null;
     if (reticle) { reticle.setAttribute('color', '#bfe5ff'); reticle.setAttribute('scale', '1 1 1'); }
@@ -295,7 +302,6 @@ window.musicManager = musicManager;
       if (!el.parentNode) return; // already removed
 
       if (kind === 'collect') {
-        // collect
         try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch(_) {}
         const pos = el.object3D.position;
         particleBurst(pos);
@@ -313,7 +319,6 @@ window.musicManager = musicManager;
   function clearHover(el) {
     const to = state.timers.get(el);
     if (to) { clearTimeout(to); state.timers.delete(el); }
-    // reset reticle colors handled on intersection-cleared event
   }
 
   // ---------------- particle FX ----------------
@@ -410,39 +415,36 @@ window.musicManager = musicManager;
     startGame();
   }
 
-  // Start music (attempt) — user gesture allows playback
-  try { musicManager.init(); musicManager.play(); } catch(e){ console.warn('Music play failed', e); }
-});
-
-openMenuBtn.addEventListener('click', () => {
-  showMenu(true);
-  try { musicManager.init(); } catch(e){}
-});
-
-
   // ---------------- UI wiring ----------------
-  startBtn && startBtn.addEventListener('click', startGame);
+  startBtn && startBtn.addEventListener('click', () => {
+    // user gesture allows audio playback — init musicManager then attempt play
+    try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
+    startGame();
+  });
+
   saveBtn && saveBtn.addEventListener('click', () => {
     state.orbGazeMs = parseInt(orbInput.value) || state.orbGazeMs;
     state.dangerGazeMs = parseInt(dangerInput.value) || state.dangerGazeMs;
     showToast('Settings saved');
+    try { musicManager.init(); } catch(e){}
   });
+
   restartBtn && restartBtn.addEventListener('click', restartGame);
   openMenuBtn && openMenuBtn.addEventListener('click', showOverlay);
 
-  if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => { try { musicManager.init(); } catch(e){} });
-} else { try { musicManager.init(); } catch(e){} }
-
-  // ensure overlay initially visible for settings
-  if (overlay) {
-    overlay.style.display = 'block';
-    overlay.setAttribute('aria-hidden', 'false');
-    overlay.style.pointerEvents = 'auto';
+  // Initialize music UI bindings on DOM ready (no autoplay)
+  function initOnReady() {
+    try { musicManager.init(); } catch (e) { /* ignore */ }
+    // ensure overlay visible at load
+    if (overlay) {
+      overlay.style.display = 'block';
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.style.pointerEvents = 'auto';
+    }
   }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initOnReady);
+  else initOnReady();
 
-  // expose helpers for debug in console
-  window._orbsGame = {
-    startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver
-  };
+  // expose helpers for debug (console)
+  window._orbsGame = { startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver };
 })();
