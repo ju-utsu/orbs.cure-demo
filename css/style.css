@@ -8,6 +8,7 @@ html, body, a-scene, canvas {
   --bg:#030911;
   --glass-1: rgba(255,255,255,0.035);
   --glass-2: rgba(255,255,255,0.01);
+  --glass-3: rgba(255,255,255,0.02);
   --panel-bg: rgba(12,16,22,0.55);
   --accent: #1f9cff;
   --accent-2: #6ec1ff;
@@ -170,9 +171,9 @@ button.primary{
   font-size: 13px;
   line-height: 1;
   border-radius: 6px;
-  background: #0a84ff;
+  background: rgba(12,18,26,0.45);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255,255,255,0.04);
 }
 #menuOverlay hr { opacity: 0.06; margin: 12px 0; }
 
