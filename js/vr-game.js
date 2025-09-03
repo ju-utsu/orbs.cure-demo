@@ -24,13 +24,14 @@ const musicManager = (function () {
   let tracks = defaultTracks.slice();
   let index = 0;
   let isPlaying = false;
+  const storageKey = 'orbs_bg_vol';
 
-  function create() {
+  function createAudio() {
     if (audio) return;
     audio = new Audio();
     audio.loop = true;
     audio.crossOrigin = 'anonymous';
-    audio.volume = initialVol;
+    audio.volume = Number.isFinite(saved) ? saved : 0.6;
     audio.preload = 'auto';
     audio.addEventListener('ended', () => { isPlaying = false; updateUI(); });
     audio.addEventListener('play', () => { isPlaying = true; updateUI(); });
@@ -73,8 +74,8 @@ const musicManager = (function () {
     if (!audio || audio.paused) play(); else pause();
   }
 
-  function next() { loadTrack((currentIndex + 1) % tracks.length); if (isPlaying) play(); }
-  function prev() { loadTrack((currentIndex - 1 + tracks.length) % tracks.length); if (isPlaying) play(); }
+  function next() { loadTrack((index + 1) % tracks.length); if (isPlaying) play(); }
+  function prev() { loadTrack((index - 1 + tracks.length) % tracks.length); if (audio && !audio.paused) play(); }
   function setVolume(v) {
     createAudio();
     audio.volume = Math.max(0, Math.min(1, parseFloat(v)));
@@ -101,14 +102,13 @@ const musicManager = (function () {
       sel.selectedIndex = currentIndex;
       sel.addEventListener('change', () => {
         const idx = sel.selectedIndex;
-        loadTrack(idx);
-        try { play(); } catch (_) {}
+        loadTrack(idx); play();
       });
     }
 
-    if (playBtn) playBtn.addEventListener('click', () => { toggle(); });
-    if (nextBtn) nextBtn.addEventListener('click', () => { next(); });
-    if (prevBtn) prevBtn.addEventListener('click', () => { prev(); });
+    if (playBtn) playBtn.addEventListener('click', toggle);
+    if (nextBtn) nextBtn.addEventListener('click', next);
+    if (prevBtn) prevBtn.addEventListener('click', prev);
 
     if (vol) {
       vol.value = (audio ? audio.volume : 0.6;
@@ -202,7 +202,7 @@ const game = (function () {
     return orb;
   }
 
-  function spawnDanger(p) {
+  function spawnDanger() {
     const p = randPosAroundPlayer();
     const bad = document.createElement('a-box');
     bad.classList.add('interactable', 'danger');
@@ -382,27 +382,28 @@ const game = (function () {
   }
 
   // ---------------- UI wiring ----------------
-  startBtn && startBtn.addEventListener('click', () => {
+  function wireUI() {
+    if (startBtn) startBtn.addEventListener('click', () => {
     // user gesture allows audio playback — init musicManager then attempt play
-    try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
-    startGame();
-  });
+      try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
+      startGame();
+    });
 
-  saveBtn && saveBtn.addEventListener('click', () => {closeMenuSave(); try{ musicManager.init(); musicManager.play(); }catch(e){} });
-restartBtn && restartBtn.addEventListener('click', restart);
-openMenuBtn && openMenuBtn.addEventListener('click', ()=>{ openMenu();
+    if (saveBtn) saveBtn.addEventListener('click', () => {closeMenuSave(); try{ musicManager.init(); musicManager.play(); }catch(e){} });
+    if (restartBtn) restartBtn.addEventListener('click', restart);
+    if (openMenuBtn) openMenuBtn.addEventListener('click', openMenu);
     showToast('Settings saved');
-    try { musicManager.init(); } catch(e){}
-  });
+  }
 
   // Initialize music UI bindings on DOM ready (no autoplay)
-    if (startBtn) startBtn.addEventListener('click', () => { try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); } startGame(); });
-  if (saveBtn) saveBtn.addEventListener('click', () => { closeMenuSave(); try { musicManager.init(); musicManager.play(); } catch (e) {} });
-  if (restartBtn) restartBtn.addEventListener('click', restart);
-  if (openMenuBtn) openMenuBtn.addEventListener('click', openMenu);
-
-  // init
-  document.addEventListener('DOMContentLoaded', () => { try { musicManager.init(); } catch (e) {}
+  document.addEventListener('DOMContentLoaded', () => {
+    try { musicManager.init(); } catch (e) { /* silent */ }
+    // make sure overlay is visible on load so user can tweak settings
+    if (overlay) { overlay.setAttribute('aria-hidden', 'false'); overlay.style.pointerEvents = 'auto'; }
+    setScore(0);
+    if (timeVal) timeVal.textContent = state.roundTime;
+    wireUI();
+  });
 
   // expose helpers for debug (console)
   window._orbsGame = { startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver };
