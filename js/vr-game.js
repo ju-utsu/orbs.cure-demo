@@ -288,6 +288,8 @@ const game = (function () {
     if (!overlay) return;
     overlay.setAttribute('aria-hidden', 'false');
     overlay.style.pointerEvents = 'auto';
+    // disable scene interactions while menu is open
+    document.body.classList.remove('scene-interactive');
     state.paused = true;
     showToast('Menu opened');
   }
@@ -297,6 +299,8 @@ const game = (function () {
     overlay.setAttribute('aria-hidden', 'true');
     overlay.style.pointerEvents = 'none';
     state.paused = false;
+    // enable scene interactions when menu is closed (game active)
+    document.body.classList.add('scene-interactive');
     state.orbGazeMs = parseInt(orbInput.value) || state.orbGazeMs;
     state.dangerGazeMs = parseInt(dangerInput.value) || state.dangerGazeMs;
     showToast('Settings saved');
@@ -326,6 +330,17 @@ const game = (function () {
     startSpawners();
     startRoundTimer();
     showToast('Game started');
+
+    // try to enter pointer lock for better mouselook (user gesture required)
+    try {
+      const canvas = document.querySelector('a-scene canvas') || document.querySelector('canvas');
+      if (canvas && canvas.requestPointerLock) {
+        canvas.requestPointerLock();
+      }
+    } catch (e) {
+  // not critical — pointer lock may fail (mobile browsers often don't support it)
+      console.debug('pointer lock request failed or unsupported', e);
+    }
   }
 
   function triggerGameOver(msg) {
