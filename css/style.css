@@ -94,6 +94,14 @@ a-scene{ display:block; width:100vw; height:100vh; }
   pointer-events:auto;
 }
 
+/* Explicit visible state (helps when JS toggles aria-hidden only) */
+#menuOverlay[aria-hidden="false"]{
+  opacity:1;
+  transform:translate(-50%,-50%) scale(1);
+  pointer-events:auto;
+}
+
+
 /* Decorative subtle radial glow for the overlay (gives a neon grid feel) */
 #menuOverlay::before{
   content:'';
@@ -164,6 +172,10 @@ button.primary{
   flex:1 1 auto;
   min-width:86px;
 }
+
+/* small utilities for buttons */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+.btn:disabled { opacity:0.45; cursor:not-allowed; transform:none; box-shadow:none; }
 
 /* Music controls small styles (menu overlay) */
 .menu-btn.small {
