@@ -1,11 +1,9 @@
-// Robust gaze-based orb collector (uses A-Frame raycaster events, stable spawners, HUD updates)
+// Music manager + gaze-based VR/AR shared gameplay (validated)
 
-// ==============================
-// Background music manager (non-invasive)
-// ==============================
+/* ---------------- Music manager ---------------- */
 const musicManager = (function () {
   const basePath = 'assets/audio/';
-  const defaultTracks = [
+  const tracks = [
     { file: 'bg1.mp3', title: 'Cornfield Chase' },
     { file: 'bg2.mp3', title: 'Running Out' },
     { file: 'bg3.mp3', title: 'Stay' },
@@ -16,14 +14,13 @@ const musicManager = (function () {
     { file: 'bg8.mp3', title: 'Detach' },
     { file: 'bg9.mp3', title: 'Mountains' },
     { file: 'bg10.mp3', title: "Where We're Going" },
-    { file: 'bg11.mp3', title: "Day One" },
+    { file: 'bg11.mp3', title: 'Day One' },
     { file: 'bg.mp3', title: 'Afraid of Time' }
   ];
 
   let audio = null;
-  let tracks = defaultTracks.slice();
   let index = 0;
-  let isPlaying = false;
+  let playing = false;
   const storageKey = 'orbs_bg_vol';
 
   function createAudio() {
@@ -31,24 +28,26 @@ const musicManager = (function () {
     audio = new Audio();
     audio.loop = true;
     audio.crossOrigin = 'anonymous';
-    audio.volume = Number.isFinite(saved) ? saved : 0.6;
     audio.preload = 'auto';
-    audio.addEventListener('ended', () => { isPlaying = false; updateUI(); });
-    audio.addEventListener('play', () => { isPlaying = true; updateUI(); });
-    audio.addEventListener('pause', () => { isPlaying = false; updateUI(); });
+    const saved = parseFloat(localStorage.getItem(storageKey));
+    audio.volume = Number.isFinite(saved) ? saved : 0.6;
+    audio.addEventListener('play', () => { playing = true; updateUI(); });
+    audio.addEventListener('pause', () => { playing = false; updateUI(); });
+    audio.addEventListener('ended', () => { playing = false; updateUI(); });
   }
 
   function updateUI() {
     const btn = document.getElementById('playPauseMusic');
     const sel = document.getElementById('bgSelect');
     const label = document.getElementById('musicLabel');
-    if (btn) btn.textContent = isPlaying ? 'Pause' : 'Play';
+    const now = document.getElementById('nowPlaying');
+    if (btn) btn.textContent = playing ? 'Pause' : 'Play';
     if (sel) sel.selectedIndex = index;
     if (label && audio) label.textContent = Math.round(audio.volume * 100) + '%';
     if (now) now.textContent = `Now: ${tracks[index] ? tracks[index].title : '—'}`;
   }
 
-  function loadTrack(i) {
+  function load(i) {
     createAudio();
     index = Math.max(0, Math.min(i, tracks.length - 1));
     audio.src = basePath + tracks[index].file;
@@ -57,33 +56,17 @@ const musicManager = (function () {
 
   function play() {
     createAudio();
-    if (!audio.src) loadTrack(index);
+    if (!audio.src) load(index);
     const p = audio.play();
-    if (p && typeof p.then === 'function') {
-      p.catch(e => console.warn('Playback blocked:', e));
-    }
+    if (p && typeof p.then === 'function') p.catch(e => console.warn('Playback blocked:', e));
   }
+  function pause() { if (audio) audio.pause(); }
+  function toggle() { if (!audio || audio.paused) play(); else pause(); }
+  function next() { load((index + 1) % tracks.length); if (audio && !audio.paused) play(); }
+  function prev() { load((index - 1 + tracks.length) % tracks.length); if (audio && !audio.paused) play(); }
+  function setVol(v) { createAudio(); audio.volume = Math.max(0, Math.min(1, parseFloat(v))); localStorage.setItem(storageKey, audio.volume); updateUI(); }
 
-  function pause() {
-    if (audio) audio.pause();
-    isPlaying = false;
-    updateUI();
-  }
-
-  function toggle() {
-    if (!audio || audio.paused) play(); else pause();
-  }
-
-  function next() { loadTrack((index + 1) % tracks.length); if (isPlaying) play(); }
-  function prev() { loadTrack((index - 1 + tracks.length) % tracks.length); if (audio && !audio.paused) play(); }
-  function setVolume(v) {
-    createAudio();
-    audio.volume = Math.max(0, Math.min(1, parseFloat(v)));
-    localStorage.setItem('orbs_bg_vol', audio.volume);
-    updateUI();
-  }
-
-  function initUIBindings() {
+  function bindUI() {
     const sel = document.getElementById('bgSelect');
     const playBtn = document.getElementById('playPauseMusic');
     const nextBtn = document.getElementById('nextTrack');
@@ -91,45 +74,38 @@ const musicManager = (function () {
     const vol = document.getElementById('musicVol');
 
     if (sel) {
-      // populate options if they don't exist (safe)
+      // repopulate safely (keeps HTML in sync)
       sel.innerHTML = '';
-      tracks.forEach(t, => {
+      tracks.forEach(t => {
         const opt = document.createElement('option');
         opt.value = t.file;
         opt.textContent = t.title;
         sel.appendChild(opt);
       });
-      sel.selectedIndex = currentIndex;
-      sel.addEventListener('change', () => {
-        const idx = sel.selectedIndex;
-        loadTrack(idx); play();
-      });
+      sel.selectedIndex = index;
+      sel.addEventListener('change', () => { load(sel.selectedIndex); play(); });
     }
-
     if (playBtn) playBtn.addEventListener('click', toggle);
     if (nextBtn) nextBtn.addEventListener('click', next);
     if (prevBtn) prevBtn.addEventListener('click', prev);
-
     if (vol) {
-      vol.value = (audio ? audio.volume : 0.6;
+      // ensure slider has a numeric value and event
+      vol.value = audio ? audio.volume : 0.6;
       vol.addEventListener('input', () => setVol(vol.value));
     }
     updateUI();
   }
 
   return {
-    init: () => { create(); load(index); bindUI(); },
+    init: () => { createAudio(); load(index); bindUI(); },
     play, pause, toggle, next, prev, setVol,
     isPlaying: () => !!(audio && !audio.paused)
   };
 })();
+
 window.musicManager = musicManager;
 
-// ==============================
-// Game code (IIFE) - clean structure
-// ==============================
-
-  // ---------------- Game state ----------------
+/* ---------------- Game module ---------------- */
 const game = (function () {
   const state = {
     running: false,
@@ -142,9 +118,9 @@ const game = (function () {
     roundTime: 360,
     spawnIntervals: { orb: null, danger: null }
   };
-  window.state = state; // expose for AR debug
+  window.state = state; // for debugging
 
-  // ---------------- DOM refs ----------------
+  // DOM refs
   const scoreVal = document.getElementById('scoreVal');
   const timeVal = document.getElementById('timeVal');
   const toast = document.getElementById('toast');
@@ -155,22 +131,22 @@ const game = (function () {
   const saveBtn = document.getElementById('saveSettings');
   const restartBtn = document.getElementById('restartBtn');
   const openMenuBtn = document.getElementById('openMenuBtn');
-  const enterARBtnUI = document.getElementById('enterARBtn');
 
   const collectSpawner = document.getElementById('collect-spawner');
   const dangerSpawner = document.getElementById('danger-spawner');
   const ray = document.getElementById('ray');
   const reticle = document.getElementById('reticle');
 
-  // ---------------- helpers ----------------
+  // helpers
   function showToast(msg, ms = 1200) {
-    if (!toast) { console.log('[TOAST]', msg); 
+    if (!toast) return console.log('[TOAST]', msg);
     toast.textContent = msg;
     toast.hidden = false;
     toast.style.display = 'block';
     clearTimeout(toast._t);
     toast._t = setTimeout(() => { toast.style.display = 'none'; toast.hidden = true; }, ms);
   }
+
   function setScore(v) {
     state.score = v;
     if (scoreVal) scoreVal.textContent = String(v);
@@ -180,7 +156,7 @@ const game = (function () {
   }
   window.setScore = setScore;
 
-  // ---------------- spawn logic ----------------
+  // spawn helpers
   function randPosAroundPlayer(minR = 3, maxR = 8) {
     const r = minR + Math.random() * (maxR - minR);
     const a = Math.random() * Math.PI * 2;
@@ -217,7 +193,7 @@ const game = (function () {
     return bad;
   }
 
-  const MAX_ORBS_ON_SCREEN = 21; // **user requested**
+  const MAX_ORBS_ON_SCREEN = 21;
   const MAX_DANGER_ON_SCREEN = 8;
 
   function startSpawners() {
@@ -233,52 +209,51 @@ const game = (function () {
       if (count < MAX_DANGER_ON_SCREEN) spawnDanger();
     }, 1800);
   }
+
   function stopSpawners() {
     if (state.spawnIntervals.orb) clearInterval(state.spawnIntervals.orb);
     if (state.spawnIntervals.danger) clearInterval(state.spawnIntervals.danger);
     state.spawnIntervals.orb = state.spawnIntervals.danger = null;
   }
 
-  // ---------------- gaze using A-Frame raycaster events ----------------
+  // gaze handling
   let hovered = null;
-  if (ray){
-    ray.addEventListener('raycaster-intersection', (e)=>{
-    const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i => i.object.el));
-    const el = els && els.length ? els[0] : null;
-    if(el && el !== hovered){ if(hovered) clearHover(hovered); startHover(el); hovered = el; }
-  });
+  if (ray) {
+    ray.addEventListener('raycaster-intersection', (e) => {
+      const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i => i.object.el));
+      const el = els && els.length ? els[0] : null;
+      if (el && el !== hovered) { if (hovered) clearHover(hovered); startHover(el); hovered = el; }
+    });
     ray.addEventListener('raycaster-intersection-cleared', () => {
       if (hovered) clearHover(hovered);
-    hovered = null;
-    if (reticle) { reticle.setAttribute('color', '#bfe5ff'); reticle.setAttribute('scale', '1 1 1'); }
-  });
-}
+      hovered = null;
+      if (reticle) { reticle.setAttribute('color', '#bfe5ff'); reticle.setAttribute('scale', '1 1 1'); }
+    });
+  }
 
   function startHover(el) {
     const kind = el && el.dataset && el.dataset.gaze ? el.dataset.gaze : null;
     if (!kind) return;
-    // visual feedback
     if (reticle) {
       reticle.setAttribute('scale', '1.6 1.6 1');
       reticle.setAttribute('color', (kind === 'collect') ? '#ffd84d' : '#ff6b6b');
     }
-
     if (!state.running || state.paused) return;
 
     const ms = (kind === 'collect') ? (parseInt(orbInput.value) || state.orbGazeMs) : (parseInt(dangerInput.value) || state.dangerGazeMs);
 
     const timeout = setTimeout(() => {
       if (!state.running || state.paused) return;
-      if (!el.parentNode) return; // already removed
+      if (!el.parentNode) return;
 
       if (kind === 'collect') {
-        try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch(_) {}
-        const pos = el.object3D.position(pos);
+        try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+        const pos = el.object3D.position;
         particleBurst(pos);
         el.parentNode && el.parentNode.removeChild(el);
         setScore(state.score + 1);
       } else if (kind === 'danger') {
-        try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch(_) {}
+        try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
         triggerGameOver('Gazed at danger');
       }
     }, ms);
@@ -291,7 +266,7 @@ const game = (function () {
     if (to) { clearTimeout(to); state.timers.delete(el); }
   }
 
-  // ---------------- particle FX ----------------
+  // particles
   function particleBurst(pos) {
     for (let i = 0; i < 10; i++) {
       const p = document.createElement('a-sphere');
@@ -308,29 +283,29 @@ const game = (function () {
     }
   }
 
-  // ---------------- game flow ----------------
+  // menu / flow
   function openMenu() {
     if (!overlay) return;
     overlay.setAttribute('aria-hidden', 'false');
-    overlay.style.opacity = '1';
     overlay.style.pointerEvents = 'auto';
     state.paused = true;
     showToast('Menu opened');
   }
-    
+
   function closeMenuSave() {
     if (!overlay) return;
     overlay.setAttribute('aria-hidden', 'true');
-    overlay.style.opacity = '0';
     overlay.style.pointerEvents = 'none';
     state.paused = false;
-    state.orbGazeMs = parseInt(orbInput.value)||state.orbGazeMs; state.dangerGazeMs = parseInt(dangerInput.value)||state.dangerGazeMs; showToast('Settings saved'); }
+    state.orbGazeMs = parseInt(orbInput.value) || state.orbGazeMs;
+    state.dangerGazeMs = parseInt(dangerInput.value) || state.dangerGazeMs;
+    showToast('Settings saved');
   }
 
   function startRoundTimer() {
     clearInterval(state.roundTimer);
     state.roundTime = 360;
-    timeVal.textContent = state.roundTime;
+    if (timeVal) timeVal.textContent = state.roundTime;
     state.roundTimer = setInterval(() => {
       if (!state.running || state.paused) return;
       state.roundTime -= 1;
@@ -345,7 +320,6 @@ const game = (function () {
     state.paused = false;
     setScore(0);
 
-    // seed initial objects
     for (let i = 0; i < 6; i++) spawnOrb();
     for (let i = 0; i < 3; i++) spawnDanger();
 
@@ -365,47 +339,41 @@ const game = (function () {
     const got = document.getElementById('gameOverText');
     if (got) got.setAttribute('value', msg);
     showToast(msg);
-    // re-open menu so player can restart
     openMenu();
   }
 
   function restartGame() {
-    // remove all spawned entities
     const cs = collectSpawner ? Array.from(collectSpawner.children) : Array.from(document.querySelectorAll('.collectable'));
     cs.forEach(c => c.remove && c.remove());
     const ds = dangerSpawner ? Array.from(dangerSpawner.children) : Array.from(document.querySelectorAll('.danger'));
     ds.forEach(d => d.remove && d.remove());
-    // hide gameOver
     const panel = document.getElementById('gameOverPanel');
     if (panel) panel.setAttribute('visible', 'false');
     startGame();
   }
 
-  // ---------------- UI wiring ----------------
+  // UI wiring
   function wireUI() {
     if (startBtn) startBtn.addEventListener('click', () => {
-    // user gesture allows audio playback — init musicManager then attempt play
       try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
       startGame();
     });
-
-    if (saveBtn) saveBtn.addEventListener('click', () => {closeMenuSave(); try{ musicManager.init(); musicManager.play(); }catch(e){} });
-    if (restartBtn) restartBtn.addEventListener('click', restart);
+    if (saveBtn) saveBtn.addEventListener('click', () => { closeMenuSave(); try { musicManager.init(); musicManager.play(); } catch (e) {} });
+    if (restartBtn) restartBtn.addEventListener('click', restartGame);
     if (openMenuBtn) openMenuBtn.addEventListener('click', openMenu);
-    showToast('Settings saved');
   }
 
-  // Initialize music UI bindings on DOM ready (no autoplay)
+  // init
   document.addEventListener('DOMContentLoaded', () => {
     try { musicManager.init(); } catch (e) { /* silent */ }
-    // make sure overlay is visible on load so user can tweak settings
     if (overlay) { overlay.setAttribute('aria-hidden', 'false'); overlay.style.pointerEvents = 'auto'; }
     setScore(0);
     if (timeVal) timeVal.textContent = state.roundTime;
     wireUI();
   });
 
-  // expose helpers for debug (console)
+  // debug helpers
   window._orbsGame = { startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver };
-    return state;
+
+  return state;
 })();
