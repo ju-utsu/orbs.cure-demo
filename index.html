@@ -107,9 +107,9 @@
     <!-- Environment (grid/starry preset preserved) -->
     <a-entity environment="preset: starry; skyType: atmosphere; groundColor: #0a1a2a; groundTexture: walkernoise; ground: canyon; fog: 0.08; lightPosition: 0 8 -3; dressing: stones; dressingAmount: 10; dressingColor: #223a57"></a-entity>
 
-    <!-- Camera rig -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-entity id="camera" camera look-controls>
+    <!-- rig: WASD controls (moves rig), camera: look-controls with pointerLock enabled -->
+    <a-entity id="rig" position="0 1.6 0" wasd-controls="acceleration: 50">
+      <a-entity id="camera" camera look-controls="pointerLockEnabled: true">
         <!-- gaze reticle visible in VR -->
         <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
 
