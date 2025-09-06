@@ -1,7 +1,7 @@
 #Orbs.cure✨
 
 **OrbsXR** — a lightweight browser-based AR + VR game built with **A-Frame** and **WebXR**.  
-Players collect glowing orbs and avoid danger objects using only gaze — perfect for mobile demos and classroom presentations.
+Players collect glowing orbs and avoid danger objects using only gaze — perfect for Amplifying your concentration, focus and reflexes!
 
 > Demo / Repo: https://github.com/ju-utsu/orbs.cure-demo  
 > (https://ju-utsu.github.io/orbs.cure-demo/)
