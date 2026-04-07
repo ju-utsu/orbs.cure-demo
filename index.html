@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="css/style.css">
 
   <!-- A-Frame + environment component -->
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-environment-component@1.3.4/dist/aframe-environment-component.min.js"></script>
 </head>
 <body>
@@ -96,8 +96,7 @@
   renderer="antialias: true; alpha: true"
   background="color: transparent"
   vr-mode-ui="enabled: true"
-  webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay, local-floor; overlayElement: #menuOverlay"
-  embedded
+  webxr="optionalFeatures: dom-overlay, local-floor; overlayElement: #menuOverlay"
 >
     <a-assets>
       <!-- audio assets -->
@@ -125,8 +124,7 @@
 
         <!-- raycaster used for gaze interactions -->
         <a-entity id="ray"
-  raycaster="objects: .interactable; interval: 20"
-  cursor="fuse: true; fuseTimeout: 400">
+  raycaster="objects: .interactable; interval: 20">
 </a-entity>
 
         <!-- small in-head HUD -->
