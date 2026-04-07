@@ -193,8 +193,8 @@ const game = (function () {
     return bad;
   }
 
-  const MAX_ORBS_ON_SCREEN = 21;
-  const MAX_DANGER_ON_SCREEN = 8;
+  const MAX_ORBS_ON_SCREEN = 18;
+  const MAX_DANGER_ON_SCREEN = 11;
 
   function startSpawners() {
     stopSpawners();
@@ -220,8 +220,8 @@ const game = (function () {
   let hovered = null;
   if (ray) {
     ray.addEventListener('raycaster-intersection', (e) => {
-      const els = e.detail.els || (e.detail.intersections && e.detail.intersections.map(i => i.object.el));
-      const el = els && els.length ? els[0] : null;
+      const intersections = e.detail.intersections;
+      const el = intersections && intersections.length ? intersections[0].object.el : null;
       if (el && el !== hovered) { if (hovered) clearHover(hovered); startHover(el); hovered = el; }
     });
     ray.addEventListener('raycaster-intersection-cleared', () => {
