@@ -81,6 +81,8 @@
     document.getElementById('collectSound')?.play()?.catch(()=>{});
   } catch(_) {}
 
+  state?.timers?.delete?.(orb); 
+
   orb.parentNode && orb.parentNode.removeChild(orb);
 
   if (typeof window.setScore === 'function') {
@@ -97,6 +99,10 @@
 orb.addEventListener('click', collect);
 orb.addEventListener('touchstart', collect); 
     (collectSpawner || sceneEl).appendChild(orb);
+    const ray = document.getElementById('ray');
+if (ray && ray.components && ray.components.raycaster) {
+  ray.components.raycaster.refreshObjects();
+}
     return orb;
   }
 
@@ -270,6 +276,7 @@ orb.addEventListener('touchstart', collect);
 
   // Setup and start session / hit-test
   async function initAR(){
+  document.body.classList.add('scene-interactive');
     if(!('xr' in navigator)){ alert('WebXR not available'); setArStatus('WebXR unavailable', '#ff8080'); return; }
     if(xrSession) return;
 
