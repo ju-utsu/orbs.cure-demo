@@ -404,17 +404,7 @@ const game = (function () {
     }, 300);
   });
     }
-    try {
-      if (sceneEl && typeof sceneEl.enterVR === 'function') {
-        sceneEl.enterVR();
-      } else {
-        console.warn('enterVR not available');
-      }
-    } catch (e) {
-      console.error('VR failed:', e);
-    }
-  });
-    }
+    
     if (startBtn) startBtn.addEventListener('click', () => {
       try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
       startGame();
