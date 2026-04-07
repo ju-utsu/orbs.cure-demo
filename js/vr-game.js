@@ -372,12 +372,38 @@ const game = (function () {
   // UI wiring
   function wireUI() {
     if (enterVRBtn) {
-  enterVRBtn.addEventListener('click', () => {
+  enterVRBtn.addEventListener('click', async () => {
     console.log('VR button clicked');
 
-    // 🔥 allow scene interaction
+    const scene = document.querySelector('a-scene');
+
+    //  allow interaction
     document.body.classList.add('scene-interactive');
 
+    //  iOS/Android motion permission 
+    if (typeof DeviceMotionEvent !== 'undefined' &&
+        typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        await DeviceMotionEvent.requestPermission();
+      } catch (e) {}
+    }
+
+    //  FORCE fullscreen (CRITICAL for VR box)
+    const canvas = scene.canvas;
+    if (canvas && canvas.requestFullscreen) {
+      try {
+        await canvas.requestFullscreen();
+      } catch (e) {}
+    }
+
+    //  FORCE VR mode (magic window fallback)
+    setTimeout(() => {
+      if (scene) {
+        scene.enterVR(true); // 👈 THIS LINE IS THE KEY
+      }
+    }, 300);
+  });
+    }
     try {
       if (sceneEl && typeof sceneEl.enterVR === 'function') {
         sceneEl.enterVR();
