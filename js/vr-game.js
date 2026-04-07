@@ -131,6 +131,8 @@ const game = (function () {
   const saveBtn = document.getElementById('saveSettings');
   const restartBtn = document.getElementById('restartBtn');
   const openMenuBtn = document.getElementById('openMenuBtn');
+  const enterVRBtn = document.getElementById('enterVRBtn');
+  const sceneEl = document.querySelector('a-scene');
 
   const collectSpawner = document.getElementById('collect-spawner');
   const dangerSpawner = document.getElementById('danger-spawner');
@@ -369,6 +371,24 @@ const game = (function () {
 
   // UI wiring
   function wireUI() {
+    if (enterVRBtn) {
+  enterVRBtn.addEventListener('click', () => {
+    console.log('VR button clicked');
+
+    // 🔥 allow scene interaction
+    document.body.classList.add('scene-interactive');
+
+    try {
+      if (sceneEl && typeof sceneEl.enterVR === 'function') {
+        sceneEl.enterVR();
+      } else {
+        console.warn('enterVR not available');
+      }
+    } catch (e) {
+      console.error('VR failed:', e);
+    }
+  });
+    }
     if (startBtn) startBtn.addEventListener('click', () => {
       try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
       startGame();
