@@ -136,7 +136,7 @@ const game = (function () {
 
   const collectSpawner = document.getElementById('collect-spawner');
   const dangerSpawner = document.getElementById('danger-spawner');
-  const ray = document.getElementById('ray');
+  const ray = document.getElementById('cursor');
   const reticle = document.getElementById('reticle');
 
   // helpers
