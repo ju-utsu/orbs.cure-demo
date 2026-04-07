@@ -96,6 +96,7 @@
   renderer="antialias: true; alpha: true"
   background="color: transparent"
   vr-mode-ui="enabled: false"
+  webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay"
   embedded
 >
     <a-assets>
@@ -111,7 +112,7 @@
     <a-entity id="rig" position="0 1.6 0" wasd-controls="acceleration: 50">
       <a-entity id="camera" camera look-controls="pointerLockEnabled: true">
         <!-- gaze reticle visible in VR -->
-        <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
+        <a-ring id="vrReticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
 
         <!-- raycaster used for gaze interactions -->
         <a-entity id="ray" raycaster="objects: .interactable; interval: 40"></a-entity>
@@ -129,9 +130,12 @@
     <a-entity id="danger-spawner"></a-entity>
 
     <!-- AR reticle (moved via hit-test) -->
-    <a-entity id="arReticle" visible="false"
-              geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
-              material="color:#0ff; shader: flat; opacity:0.8" rotation="-90 0 0"></a-entity>
+    <a-entity id="reticle"
+          visible="false"
+          geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
+          material="color:#0ff; shader: flat; opacity:0.8"
+          rotation="-90 0 0">
+</a-entity>
 
     <!-- Game over panel (in-scene) -->
     <a-entity id="gameOverPanel" visible="false">
