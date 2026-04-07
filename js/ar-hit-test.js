@@ -76,13 +76,26 @@
       // We'll also set object3D.quaternion in the update loop if needed.
     }
     orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random()*900)}; to: ${position.x} ${position.y + 0.18} ${position.z}; loop: true; easing: easeInOutSine`);
-    orb.addEventListener('click', ()=>{
-      try{ document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch(_) {}
-      orb.parentNode && orb.parentNode.removeChild(orb);
-      if(typeof window.setScore === 'function'){
-        try{ const cur = (window.state && window.state.score) ? window.state.score : 0; window.setScore(cur + 1); } catch(e){ console.warn('setScore failed', e); }
-      }
-    });
+    function collect() {
+  try {
+    document.getElementById('collectSound')?.play()?.catch(()=>{});
+  } catch(_) {}
+
+  orb.parentNode && orb.parentNode.removeChild(orb);
+
+  if (typeof window.setScore === 'function') {
+    try {
+      const cur = (window.state && window.state.score) ? window.state.score : 0;
+      window.setScore(cur + 1);
+    } catch(e){
+      console.warn('setScore failed', e);
+    }
+  }
+}
+
+// ✅ REPLACE old listener with BOTH of these
+orb.addEventListener('click', collect);
+orb.addEventListener('touchstart', collect); 
     (collectSpawner || sceneEl).appendChild(orb);
     return orb;
   }
