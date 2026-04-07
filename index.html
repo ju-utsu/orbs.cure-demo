@@ -49,7 +49,7 @@
 
     <!-- AR + VR controls placed here as requested -->
     <div class="buttons-row">
-      <button id="enterARBtn" style="display:none">Enter AR</button>
+      <button id="enterARBtn" style="Enter AR">Enter AR</button>
       <button id="enterVRBtn" title="Enter VR">Enter VR</button>
     </div>
 
@@ -92,13 +92,13 @@
 
   <!-- ======= A-Frame Scene (3D canvas) ======= -->
   <a-scene
-  id="scene"
-  renderer="antialias: true; alpha: true"
-  background="color: transparent"
-  vr-mode-ui="enabled: false"
-  webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay"
-  embedded
->
+    id="scene"
+    renderer="antialias: true; alpha: true"
+    background="color: transparent"
+    vr-mode-ui="enabled: false"
+    webxr="optionalFeatures: hit-test, dom-overlay"
+    embedded
+  >
     <a-assets>
       <!-- audio assets -->
       <audio id="collectSound" src="assets/audio/click.ogg"></audio>
@@ -112,10 +112,13 @@
     <a-entity id="rig" position="0 1.6 0" wasd-controls="acceleration: 50">
       <a-entity id="camera" camera look-controls="pointerLockEnabled: true">
         <!-- gaze reticle visible in VR -->
-        <a-ring id="reticle" position="0 0 -0.9" radius-inner="0.008" radius-outer="0.016" color="#bfe5ff"></a-ring>
+        <a-ring id="vr-reticle" position="0 0 -0.9"
+                radius-inner="0.008"
+                radius-outer="0.016"
+                color="#bfe5ff"></a-ring>
 
         <!-- raycaster used for gaze interactions -->
-        <a-entity id="ray" raycaster="objects: .interactable; interval: 40"></a-entity>
+        <a-entity id="ray" raycaster="objects: .interactable; interval: 20"></a-entity>
 
         <!-- small in-head HUD -->
         <a-entity position="-0.42 0.32 -1">
@@ -130,7 +133,7 @@
     <a-entity id="danger-spawner"></a-entity>
 
     <!-- AR reticle (moved via hit-test) -->
-    <a-entity id="reticle"
+    <a-entity id="ar-reticle"
           visible="false"
           geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
           material="color:#0ff; shader: flat; opacity:0.8"
