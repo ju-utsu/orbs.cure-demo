@@ -119,12 +119,15 @@
 
         <a-entity 
   id="cursor"
-  cursor="fuse: true; fuseTimeout: 800"
+  cursor="fuse: true; fuseTimeout: 400"
   raycaster="objects: .interactable">
 </a-entity>
 
         <!-- raycaster used for gaze interactions -->
-        <a-entity id="ray" raycaster="objects: .interactable; interval: 20"></a-entity>
+        <a-entity id="ray"
+  raycaster="objects: .interactable; interval: 20"
+  cursor="fuse: true; fuseTimeout: 400">
+</a-entity>
 
         <!-- small in-head HUD -->
         <a-entity position="-0.42 0.32 -1">
