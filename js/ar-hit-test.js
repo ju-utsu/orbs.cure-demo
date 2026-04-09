@@ -66,6 +66,7 @@
   function createOrbEntityAt(position, quaternion=null){
     const orb = document.createElement('a-sphere');
     orb.classList.add('interactable','collectable');
+    orb.object3D.matrixAutoUpdate = true;
     orb.dataset.gaze = 'collect';
     orb.setAttribute('radius','0.18');
     orb.setAttribute('color','#ffd84d');
@@ -111,7 +112,15 @@ orb.addEventListener('mouseleave', () => {
   console.log('👁️ AR Hover end');
 });
     (collectSpawner || sceneEl).appendChild(orb);
+    //Lock orb in world space
     setTimeout(() => {
+       if (orb.object3D) {
+         orb.object3D.position.set(position.x, position.y, position.z);
+         orb.object3D.updateMatrixWorld(true);
+         console.log('🌍 Orb locked in world space');
+       }
+    }, 50);
+    
   const ray = document.getElementById('cursor');
   if (ray && ray.components && ray.components.raycaster) {
     ray.components.raycaster.refreshObjects();
