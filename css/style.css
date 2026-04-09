@@ -285,7 +285,7 @@ button:focus, input:focus{
 /* Ensure overlays sit above canvas; allow canvas to be interactive only when needed */
 
 a-scene {
-  position: fixed;
+  display: block;
   inset: 0;
   width: 100vw;
   height: 100vh;
