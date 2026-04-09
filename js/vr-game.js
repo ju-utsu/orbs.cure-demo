@@ -177,6 +177,13 @@ const game = (function () {
     orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random() * 900)}; to: ${p.x} ${p.y + 0.22} ${p.z}; loop: true; easing: easeInOutSine`);
     orb.dataset.gaze = 'collect';
     (collectSpawner || document.querySelector('a-scene')).appendChild(orb);
+
+    setTimeout(() => {
+      if (ray && ray.components && ray.components.raycaster) {
+        ray.components.raycaster.refreshObjects();
+      }
+    }, 0);
+
     return orb;
   }
 
@@ -192,6 +199,13 @@ const game = (function () {
     bad.setAttribute('position', `${p.x} ${Math.max(0.5, p.y - 0.6)} ${p.z}`);
     bad.setAttribute('animation__rot', 'property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
     (dangerSpawner || document.querySelector('a-scene')).appendChild(bad);
+
+    setTimeout(() => {
+      if (ray && ray.components && ray.components.raycaster) {
+        ray.components.raycaster.refreshObjects();
+      }
+    }, 0);
+    
     return bad;
   }
 
