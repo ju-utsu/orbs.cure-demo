@@ -76,33 +76,49 @@
       // We'll also set object3D.quaternion in the update loop if needed.
     }
     orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random()*900)}; to: ${position.x} ${position.y + 0.18} ${position.z}; loop: true; easing: easeInOutSine`);
+
+
     function collect() {
+  console.log('✨ AR orb collected');
+
+  // play sound
   try {
     document.getElementById('collectSound')?.play()?.catch(()=>{});
   } catch(_) {}
 
-  state?.timers?.delete?.(orb); 
-
+  // remove orb
   orb.parentNode && orb.parentNode.removeChild(orb);
 
-  if (typeof window.setScore === 'function') {
-    try {
-      const cur = (window.state && window.state.score) ? window.state.score : 0;
-      window.setScore(cur + 1);
-    } catch(e){
-      console.warn('setScore failed', e);
-    }
+  //  USE SAME GAME SYSTEM
+  if (window.state) {
+    window.state.score = (window.state.score || 0) + 1;
   }
-}
 
-// ✅ REPLACE old listener with BOTH of these
+  if (typeof window.setScore === 'function') {
+    window.setScore(window.state.score);
+  }
+    }
+    
+
+// REPLACES old listener with BOTH of these
 orb.addEventListener('click', collect);
-orb.addEventListener('touchstart', collect); 
+orb.addEventListener('touchstart', collect);
+    orb.addEventListener('mouseenter', () => {
+  console.log('👁️ AR Hover start');
+});
+
+orb.addEventListener('mouseleave', () => {
+  console.log('👁️ AR Hover end');
+});
     (collectSpawner || sceneEl).appendChild(orb);
-    const ray = document.getElementById('ray');
-if (ray && ray.components && ray.components.raycaster) {
-  ray.components.raycaster.refreshObjects();
-}
+    setTimeout(() => {
+  const ray = document.getElementById('cursor');
+  if (ray && ray.components && ray.components.raycaster) {
+    ray.components.raycaster.refreshObjects();
+    console.log('🔄 Raycaster refreshed (AR)');
+  }
+}, 100);
+
     return orb;
   }
 
