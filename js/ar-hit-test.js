@@ -66,7 +66,12 @@
   function createOrbEntityAt(position, quaternion=null){
     const orb = document.createElement('a-sphere');
     orb.classList.add('interactable','collectable');
-    orb.object3D.matrixAutoUpdate = true;
+
+    //guarantees the 3D object exists and we control how it updates in AR 
+    orb.addEventListener('loaded', () => {
+      orb.object3D.matrixAutoUpdate = true;
+    });
+    
     orb.dataset.gaze = 'collect';
     orb.setAttribute('radius','0.18');
     orb.setAttribute('color','#ffd84d');
