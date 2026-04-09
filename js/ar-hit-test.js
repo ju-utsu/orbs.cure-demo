@@ -419,6 +419,13 @@ orb.addEventListener('mouseleave', () => {
     }
 
     if(enterARBtn) enterARBtn.addEventListener('click', ()=> { if(!xrSession) initAR(); });
+    if (enterVRBtn && sceneEl) {
+      enterVRBtn.addEventListener('click', () => {
+        if (!sceneEl.is('vr-mode')) {
+          sceneEl.enterVR();
+        }
+      });
+    }
     
     // debug: ?arforce=1 to force the button and debug info
     try {
