@@ -81,8 +81,17 @@
       // set rotation from quaternion (A-Frame uses rotation attribute but we will set object3D quaternion later)
       // We'll also set object3D.quaternion in the update loop if needed.
     }
-    orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random()*900)}; to: ${position.x} ${position.y + 0.18} ${position.z}; loop: true; easing: easeInOutSine`);
 
+    // (safe float effect
+
+    orb.setAttribute('animation__float', {
+      property: 'object3D.position.y',
+      dir: 'alternate',
+      dur: 2000,
+      loop: true,
+      easing: 'easeInOutSine',
+      to: position.y + 0.18
+    });
 
     function collect() {
   console.log('✨ AR orb collected');
@@ -117,14 +126,7 @@ orb.addEventListener('mouseleave', () => {
   console.log('👁️ AR Hover end');
 });
     (collectSpawner || sceneEl).appendChild(orb);
-    //Lock orb in world space
-    setTimeout(() => {
-       if (orb.object3D) {
-         orb.object3D.position.set(position.x, position.y, position.z);
-         orb.object3D.updateMatrixWorld(true);
-         console.log('🌍 Orb locked in world space');
-       }
-    }, 50);
+    
     
   const ray = document.getElementById('cursor');
   if (ray && ray.components && ray.components.raycaster) {
@@ -386,7 +388,7 @@ orb.addEventListener('mouseleave', () => {
 
   // Setup capability checks, buttons
   function setup() {
-    if(!enterARBtn){ setArStatus('AR UI missing', '#ffd880'); } else { enterARBtn.style.display='none'; setArStatus('Checking WebXR availability...'); }
+    if(!enterARBtn){ setArStatus('AR UI missing', '#ffd880'); } else { enterARBtn.style.display='inline-block'; setArStatus('Checking WebXR availability...'); }
 
     if(!('xr' in navigator)){
       setArStatus('navigator.xr missing — AR not available', '#ff8080');
