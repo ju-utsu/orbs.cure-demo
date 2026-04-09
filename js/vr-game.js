@@ -389,17 +389,16 @@ const game = (function () {
     }
 
     //  FORCE fullscreen (CRITICAL for VR box)
-    const canvas = scene.canvas;
-    if (canvas && canvas.requestFullscreen) {
+    if (scene.requestFullscreen) {
       try {
-        await canvas.requestFullscreen();
+        await scene.requestFullscreen();
       } catch (e) {}
     }
 
     //  FORCE VR mode (magic window fallback)
     setTimeout(() => {
       if (scene) {
-        scene.enterVR(true); // 👈 THIS LINE IS THE KEY
+        scene.enterVR(); // 👈 THIS LINE IS THE KEY   Uses proper WebXR API (correct)
       }
     }, 300);
   });
