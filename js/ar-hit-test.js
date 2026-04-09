@@ -306,6 +306,10 @@ orb.addEventListener('mouseleave', () => {
     showToast('No surface to place on');
   }
 
+
+
+
+
   // Setup and start session / hit-test
   async function initAR(){
   document.body.classList.add('scene-interactive');
@@ -321,7 +325,7 @@ orb.addEventListener('mouseleave', () => {
     try {
       xrSession = await navigator.xr.requestSession('immersive-ar', {
         requiredFeatures: ['hit-test'],
-        optionalFeatures: ['local-floor']
+        optionalFeatures: ['local-floor', 'anchors']
       });
 
       const renderer = await waitForSceneRenderer();
@@ -335,11 +339,15 @@ orb.addEventListener('mouseleave', () => {
       if(env) env.setAttribute('visible','false');
 
       // attach session to renderer
-      if(renderer.xr && typeof renderer.xr.setSession === 'function'){
+      if (renderer.xr) {
         await renderer.xr.setSession(xrSession);
       } else {
         const gl = renderer.getContext && renderer.getContext();
-        if(gl) xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
+        if (gl) {
+          xrSession.updateRenderState({
+            baseLayer: new XRWebGLLayer(xrSession, gl)
+          });
+        }
       }
 
       xrRefSpace = await xrSession.requestReferenceSpace('local');
@@ -354,6 +362,9 @@ orb.addEventListener('mouseleave', () => {
       xrSession.addEventListener('select', onSelect);
 
       xrSession.addEventListener('end', ()=> {
+        if (sceneEl.renderer && sceneEl.renderer.xr) {
+  sceneEl.renderer.xr.setSession(null);
+        }
         // cleanup anchors
         anchors.forEach(item => { try{ item.anchor.delete && item.anchor.delete(); } catch(_){} if(item.el) item.el.parentNode && item.el.parentNode.removeChild(item.el); });
         anchors.length = 0;
@@ -408,8 +419,7 @@ orb.addEventListener('mouseleave', () => {
     }
 
     if(enterARBtn) enterARBtn.addEventListener('click', ()=> { if(!xrSession) initAR(); });
-    if(enterVRBtn && sceneEl) enterVRBtn.addEventListener('click', ()=> { try{ if(typeof sceneEl.enterVR === 'function') sceneEl.enterVR(); } catch(e){ console.warn('enterVR failed', e); } });
-
+    
     // debug: ?arforce=1 to force the button and debug info
     try {
       const u = new URL(window.location.href);
