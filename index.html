@@ -47,7 +47,14 @@
 
     <hr>
 
-    
+    <!-- AR + VR controls placed here as requested -->
+    <div class="buttons-row">
+      <button id="enterARBtn">Enter AR</button>
+      <button id="enterVRBtn" title="Enter VR">Enter VR</button>
+    </div>
+
+    <div id="arStatus" aria-live="polite" class="status-line"></div>
+  </div>
 
   <!-- MUSIC CONTROLS (insert inside #menuOverlay, e.g. after the .row buttons) -->
 <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:10px 0;" />
@@ -83,13 +90,7 @@
   </div> <!-- end music block -->
 </div> <!-- end #menuOverlay -->
 
-    <!-- AR + VR controls placed here as requested -->
-<!--  AR / VR CONTROLS LIVE OUTSIDE -->
-<div id="xrControls" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:9999;">
-  <button id="enterARBtn">Enter AR</button>
-  <button id="enterVRBtn">Enter VR</button>
-  <div id="arStatus" style="color:#9fdfff; text-align:center; margin-top:6px;"></div>
-</div>
+  
 
   <!-- ======= A-Frame Scene (3D canvas) ======= -->
   <a-scene
