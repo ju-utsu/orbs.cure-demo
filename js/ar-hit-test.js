@@ -332,50 +332,51 @@ orb.addEventListener('mouseleave', () => {
 
         console.log('✅ XR Session started');
 
-        sceneEl.renderer.setAnimationLoop((time, frame) => 
-        {
+        // 🫀 Start XR loop
+        renderer.setAnimationLoop((time, frame) => {
           if (frame) onXRFrame(time, frame);
         });
-      }, { once: true }); // 👈 THIS IS IMPORTANT
+
+        // 🎯 NOW xrSession is valid → safe to use
+        xrRefSpace = await xrSession.requestReferenceSpace('local');
+        const viewerSpace = await xrSession.requestReferenceSpace('viewer');
+        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+
+        setArStatus('AR active — move device to detect surfaces', '#9fffb3');
+        showToast('AR started', 1200);
+        disableARBtn('AR Active');
+
+  // 🎮 interactions // wire select
+        xrSession.addEventListener('select', onSelect);
+
+        xrSession.addEventListener('end', () => {
+          anchors.length = 0;
+          fixedPlacements.length = 0;
+          latestHit = null;
+          latestHitPose = null;
+          hitTestSource = null;
+          xrRefSpace = null;
+          xrSession = null;
+
+          if (arReticle) arReticle.setAttribute('visible','false');
+          
+          setArStatus('AR session ended', '#ffd880');
+          showToast('AR ended', 1000);
+          enableARBtn('Enter AR');
+          
+          try { restoreOverlayForce(); } catch(_) {}
+        });
+      
+      }, { once: true });// 👈 THIS IS IMPORTANT
       
 
-      // try to enable renderer transparency if possible (best-effort)
+      // renderer visual tweaks// try to enable renderer transparency if possible (best-effort)
       try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); if(renderer.domElement) renderer.domElement.style.background='transparent'; } catch(_) {}
 
       // hide environment (if any) so it won't occlude camera feed
       const env = sceneEl ? sceneEl.querySelector('[environment]') : null;
       if(env) env.setAttribute('visible','false');
 
-      
-
-      xrRefSpace = await xrSession.requestReferenceSpace('local');
-      const viewerSpace = await xrSession.requestReferenceSpace('viewer');
-      hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
-
-      setArStatus('AR active — move device to detect surfaces', '#9fffb3');
-      showToast('AR started', 1200);
-      disableARBtn('AR Active');
-
-      // wire select
-      xrSession.addEventListener('select', onSelect);
-
-      xrSession.addEventListener('end', () => {
-        anchors.length = 0;
-        fixedPlacements.length = 0;
-        latestHit = null;
-        latestHitPose = null;
-        hitTestSource = null;
-        xrRefSpace = null;
-        xrSession = null;
-
-        if (arReticle) arReticle.setAttribute('visible','false');
-
-        setArStatus('AR session ended', '#ffd880');
-        showToast('AR ended', 1000);
-        enableARBtn('Enter AR');
-
-        try { restoreOverlayForce(); } catch(_) {}
-      });
       
     } catch (err) {
       console.error('initAR failed:', err);
