@@ -331,6 +331,8 @@ orb.addEventListener('mouseleave', () => {
         xrSession = sceneEl.renderer.xr.getSession();
 
         console.log('✅ XR Session started');
+        initAR(); // NOW it's safe
+      }, { once: true });
 
         // 🫀 Start XR loop
         renderer.setAnimationLoop((time, frame) => {
@@ -408,11 +410,10 @@ orb.addEventListener('mouseleave', () => {
       if(enterARBtn) enableARBtn('Enter AR');
     }
 
-    if(enterARBtn) enterARBtn.addEventListener('click', ()=> { if(!xrSession) initAR(); });
-    if (enterVRBtn && sceneEl) {
-      enterVRBtn.addEventListener('click', () => {
+    if (enterARBtn && sceneEl) {
+      enterARBtn.addEventListener('click', () => {
         if (!sceneEl.is('vr-mode')) {
-          sceneEl.enterVR();
+          sceneEl.enterVR(); // 🚀 starts AR session
         }
       });
     }
