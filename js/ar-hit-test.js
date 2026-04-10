@@ -324,18 +324,20 @@ orb.addEventListener('mouseleave', () => {
     try {
 
       const renderer = await waitForSceneRenderer();
-      xrSession = sceneEl.renderer.xr.getSession();
+      if (!renderer) throw new Error('Renderer unavailable');
+      
+      sceneEl.renderer.xr.addEventListener('sessionstart', () => {
+      
+        xrSession = sceneEl.renderer.xr.getSession();
 
-      if (!xrSession) {
-        console.warn('❌ No XR session from A-Frame');
-        return;
-      }
-      if(!renderer) throw new Error('Renderer unavailable');
+        console.log('✅ XR Session started');
 
-      sceneEl.renderer.setAnimationLoop((time, frame) => 
-      {
-        if (frame) onXRFrame(time, frame);
-      });
+        sceneEl.renderer.setAnimationLoop((time, frame) => 
+        {
+          if (frame) onXRFrame(time, frame);
+        });
+      }, { once: true }); // 👈 THIS IS IMPORTANT
+      
 
       // try to enable renderer transparency if possible (best-effort)
       try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); if(renderer.domElement) renderer.domElement.style.background='transparent'; } catch(_) {}
