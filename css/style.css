@@ -27,7 +27,14 @@ html,body{
 }
 
 /* Make the A-Frame canvas full screen */
-a-scene{ display:block; width:100vw; height:100vh; }
+a-scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: auto;
+}
 
 /* HUD - top-left */
 #hud{
@@ -122,7 +129,7 @@ a-scene{ display:block; width:100vw; height:100vh; }
   opacity:0;
   pointer-events:none;
   transform: translate(-50%,-48%) scale(.995);
-  display:block; /* keep in DOM for a11y, but visually hidden */
+ /* display:block; /* keep in DOM for a11y, but visually hidden */
 }
 
 /* menu content */
@@ -285,12 +292,20 @@ button:focus, input:focus{
 /* Ensure overlays sit above canvas; allow canvas to be interactive only when needed */
 
 a-scene {
-  display: block;
+  position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
   z-index: 1;
+  pointer-events: auto;
 }
 
 /* Toast top */
 #toast { z-index: 10002; }
+
+/*Restore A-Frame AR/VR buttons */
+.a-enter-vr, .a-enter-ar {
+  display: block !important;
+  z-index: 9999 !important;
+}
+
