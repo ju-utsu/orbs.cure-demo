@@ -141,7 +141,6 @@ orb.addEventListener('mouseleave', () => {
   // Called every XR frame: update reticle, record latest hit, update anchors/fixed placements
   function onXRFrame(time, frame){
     if(!xrSession) return;
-    xrAnimHandle = xrSession.requestAnimationFrame(onXRFrame);
 
     // Update anchors/fixed placements first
     if(frame && xrRefSpace){
@@ -317,19 +316,26 @@ orb.addEventListener('mouseleave', () => {
     if(xrSession) return;
 
     disableARBtn('Starting AR...');
-    setArStatus('Requesting AR session...');
+    setArStatus('Waiting for AR session from A-Frame...');
 
     // hide HTML overlay to ensure camera passthrough visible
     try { hideOverlayForce(); } catch(_) {}
 
     try {
-      xrSession = await navigator.xr.requestSession('immersive-ar', {
-        requiredFeatures: ['hit-test'],
-        optionalFeatures: ['local-floor', 'anchors']
-      });
 
       const renderer = await waitForSceneRenderer();
+      xrSession = sceneEl.renderer.xr.getSession();
+
+      if (!xrSession) {
+        console.warn('❌ No XR session from A-Frame');
+        return;
+      }
       if(!renderer) throw new Error('Renderer unavailable');
+
+      sceneEl.renderer.setAnimationLoop((time, frame) => 
+      {
+        if (frame) onXRFrame(time, frame);
+      });
 
       // try to enable renderer transparency if possible (best-effort)
       try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); if(renderer.domElement) renderer.domElement.style.background='transparent'; } catch(_) {}
@@ -338,17 +344,7 @@ orb.addEventListener('mouseleave', () => {
       const env = sceneEl ? sceneEl.querySelector('[environment]') : null;
       if(env) env.setAttribute('visible','false');
 
-      // attach session to renderer
-      if (renderer.xr) {
-        await renderer.xr.setSession(xrSession);
-      } else {
-        const gl = renderer.getContext && renderer.getContext();
-        if (gl) {
-          xrSession.updateRenderState({
-            baseLayer: new XRWebGLLayer(xrSession, gl)
-          });
-        }
-      }
+      
 
       xrRefSpace = await xrSession.requestReferenceSpace('local');
       const viewerSpace = await xrSession.requestReferenceSpace('viewer');
@@ -361,33 +357,24 @@ orb.addEventListener('mouseleave', () => {
       // wire select
       xrSession.addEventListener('select', onSelect);
 
-      xrSession.addEventListener('end', ()=> {
-        if (sceneEl.renderer && sceneEl.renderer.xr) {
-  sceneEl.renderer.xr.setSession(null);
-        }
-        // cleanup anchors
-        anchors.forEach(item => { try{ item.anchor.delete && item.anchor.delete(); } catch(_){} if(item.el) item.el.parentNode && item.el.parentNode.removeChild(item.el); });
+      xrSession.addEventListener('end', () => {
         anchors.length = 0;
-        // cleanup fixed placements
-        fixedPlacements.forEach(item => { if(item.el) item.el.parentNode && item.el.parentNode.removeChild(item.el); });
         fixedPlacements.length = 0;
-
         latestHit = null;
         latestHitPose = null;
         hitTestSource = null;
         xrRefSpace = null;
         xrSession = null;
-        if(arReticle) arReticle.setAttribute('visible','false');
 
-        // restore environment visibility
-        try { const env = sceneEl ? sceneEl.querySelector('[environment]') : null; if(env) env.setAttribute('visible','true'); } catch(_) {}
+        if (arReticle) arReticle.setAttribute('visible','false');
+
         setArStatus('AR session ended', '#ffd880');
         showToast('AR ended', 1000);
         enableARBtn('Enter AR');
-        try{ restoreOverlayForce(); } catch(_) {}
-      });
 
-      xrAnimHandle = xrSession.requestAnimationFrame(onXRFrame);
+        try { restoreOverlayForce(); } catch(_) {}
+      });
+      
     } catch (err) {
       console.error('initAR failed:', err);
       setArStatus('Failed to start AR — see console', '#ff8080');
