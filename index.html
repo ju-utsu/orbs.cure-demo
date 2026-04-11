@@ -102,6 +102,7 @@
   renderer="antialias: true; alpha: true"
   background="color: transparent"
   vr-mode-ui="enabled: true"
+  xr-mode-ui="enabled: true"
   webxr="requiredFeatures: hit-test; optionalFeatures: local-floor, anchors"
   >
     <a-assets>
@@ -149,12 +150,12 @@
 
     <!-- AR reticle (moved via hit-test) -->
     <a-entity id="arReticle"
-  visible="false"
-  geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
-  material="color:#00ffff; shader: flat; opacity:0.9; emissive:#00ffff; emissiveIntensity:0.6"
-  rotation="-90 0 0"
-  animation="property: scale; dir: alternate; dur: 800; loop: true; to: 1.2 1.2 1.2">
-</a-entity>
+      visible="false"
+      geometry="primitive: ring; radiusInner: 0.05; radiusOuter: 0.08"
+      material="color:#00ffff; shader: flat; opacity:0.9; emissive:#00ffff; emissiveIntensity:0.6"
+      rotation="-90 0 0"
+      animation="property: scale; dir: alternate; dur: 800; loop: true; to: 1.2 1.2 1.2">
+    </a-entity>
 
     <!-- Game over panel (in-scene) -->
     <a-entity id="gameOverPanel" visible="false">
