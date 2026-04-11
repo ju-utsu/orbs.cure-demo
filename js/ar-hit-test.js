@@ -357,7 +357,7 @@ orb.addEventListener('mouseleave', () => {
     const env = sceneEl ? sceneEl.querySelector('[environment]') : null;
     if(env) env.setAttribute('visible','false');
     
-    xrSession = sceneEl.renderer.xr.getSession();
+    xrSession = renderer.xr.getSession();
 
     console.log('✅ XR Session started');
 
@@ -420,10 +420,11 @@ orb.addEventListener('mouseleave', () => {
 
     if (enterARBtn && sceneEl) {
       enterARBtn.addEventListener('click', () => {
+        await initAR(); // 👈 attach listener FIRST
+        
         if (!sceneEl.is('vr-mode')) {
           sceneEl.enterVR(); // 🚀 starts AR session
         }
-        initAR(); // attaches listener
       });
     }
     
