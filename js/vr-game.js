@@ -202,7 +202,8 @@ sceneEl?.addEventListener('enter-ar', () => {
     const p = randPosAroundPlayer();
     const orb = document.createElement('a-sphere');
     orb.classList.add('interactable', 'collectable');
-    orb.setAttribute('radius', '0.28');
+    orb.setAttribute('radius', '0.33');
+    orb.setAttribute('material', 'shader: standard; emissiveIntensity: 1.5');
     orb.setAttribute('color', '#ffd84d');
     orb.setAttribute('emissive', '#ffeb99');
     orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
@@ -215,7 +216,7 @@ sceneEl?.addEventListener('enter-ar', () => {
       if (ray && ray.components && ray.components.raycaster) {
         ray.components.raycaster.refreshObjects();
       }
-    }, 0);
+    }, 50);
 
     return orb;
   }
@@ -436,6 +437,12 @@ sceneEl?.addEventListener('enter-ar', () => {
       } catch (e) {}
     }
 
+    // ENTER VR DIRECTLY (no timeout needed)
+    if (scene && !scene.is('vr-mode')) {
+      scene.enterVR();
+    }
+  });
+      
     //  FORCE fullscreen (CRITICAL for VR box)
     if (scene.requestFullscreen) {
       try {
@@ -443,12 +450,10 @@ sceneEl?.addEventListener('enter-ar', () => {
       } catch (e) {}
     }
 
-    //  FORCE VR mode (magic window fallback)
-    setTimeout(() => {
-      if (scene) {
-        scene.enterVR(); // 👈 THIS LINE IS THE KEY   Uses proper WebXR API (correct)
-      }
-    }, 300);
+    // ENTER VR DIRECTLY (no timeout needed)
+    if (scene && !scene.is('vr-mode')) {
+      scene.enterVR();
+    }
   });
     }
     
