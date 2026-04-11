@@ -442,14 +442,7 @@ sceneEl?.addEventListener('enter-ar', () => {
       scene.enterVR();
     }
   });
-      
-    //  FORCE fullscreen (CRITICAL for VR box)
-    if (scene.requestFullscreen) {
-      try {
-        await scene.requestFullscreen();
-      } catch (e) {}
     }
-  }
     
     if (startBtn) startBtn.addEventListener('click', () => {
       try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
