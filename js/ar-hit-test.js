@@ -311,8 +311,14 @@ orb.addEventListener('mouseleave', () => {
 
   // Setup and start session / hit-test
   async function initAR(){
-  document.body.classList.add('scene-interactive');
-    if(!('xr' in navigator)){ alert('WebXR not available'); setArStatus('WebXR unavailable', '#ff8080'); return; }
+    document.body.classList.add('scene-interactive');
+    
+    if(!('xr' in navigator)){ 
+      alert('WebXR not available'); 
+      setArStatus('WebXR unavailable', '#ff8080'); 
+      return; 
+    }
+    
     if(xrSession) return;
 
     disableARBtn('Starting AR...');
@@ -322,71 +328,73 @@ orb.addEventListener('mouseleave', () => {
     try { hideOverlayForce(); } catch(_) {}
 
     try {
-
       const renderer = await waitForSceneRenderer();
       if (!renderer) throw new Error('Renderer unavailable');
       
-      sceneEl.renderer.xr.addEventListener('sessionstart', () => {
-      
-        xrSession = sceneEl.renderer.xr.getSession();
+      renderer.xr.addEventListener('sessionstart', onSessionStart, { once: true });
 
-        console.log('✅ XR Session started');
-        initAR(); // NOW it's safe
-      }, { once: true });
-
-        // 🫀 Start XR loop
-        renderer.setAnimationLoop((time, frame) => {
-          if (frame) onXRFrame(time, frame);
-        });
-
-        // 🎯 NOW xrSession is valid → safe to use
-        xrRefSpace = await xrSession.requestReferenceSpace('local');
-        const viewerSpace = await xrSession.requestReferenceSpace('viewer');
-        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
-
-        setArStatus('AR active — move device to detect surfaces', '#9fffb3');
-        showToast('AR started', 1200);
-        disableARBtn('AR Active');
-
-  // 🎮 interactions // wire select
-        xrSession.addEventListener('select', onSelect);
-
-        xrSession.addEventListener('end', () => {
-          anchors.length = 0;
-          fixedPlacements.length = 0;
-          latestHit = null;
-          latestHitPose = null;
-          hitTestSource = null;
-          xrRefSpace = null;
-          xrSession = null;
-
-          if (arReticle) arReticle.setAttribute('visible','false');
-          
-          setArStatus('AR session ended', '#ffd880');
-          showToast('AR ended', 1000);
-          enableARBtn('Enter AR');
-          
-          try { restoreOverlayForce(); } catch(_) {}
-        });
-      
-      }, { once: true });// 👈 THIS IS IMPORTANT
-      
-
-      // renderer visual tweaks// try to enable renderer transparency if possible (best-effort)
-      try { renderer.setClearColor && renderer.setClearColor(0x000000, 0); if(renderer.domElement) renderer.domElement.style.background='transparent'; } catch(_) {}
-
-      // hide environment (if any) so it won't occlude camera feed
-      const env = sceneEl ? sceneEl.querySelector('[environment]') : null;
-      if(env) env.setAttribute('visible','false');
-
-      
     } catch (err) {
       console.error('initAR failed:', err);
       setArStatus('Failed to start AR — see console', '#ff8080');
       showToast('Failed to start AR — see console', 2500);
       enableARBtn('Enter AR');
-      try{ restoreOverlayForce(); } catch(_) {}
     }
+  }
+
+  // 🌟 NOW IT LIVES HERE (GLOBAL INSIDE IIFE)
+  async function onSessionStart() {
+    const renderer = sceneEl.renderer;
+
+          //🎨 renderer visual tweaks// try to enable renderer transparency if possible (best-effort)
+    try { 
+      renderer.setClearColor && renderer.setClearColor(0x000000, 0); 
+      if(renderer.domElement) {
+        renderer.domElement.style.background='transparent'; 
+      }
+    } catch(_) {}
+
+      //  🌍hide environment (if any) so it won't occlude camera feed
+    const env = sceneEl ? sceneEl.querySelector('[environment]') : null;
+    if(env) env.setAttribute('visible','false');
+    
+    xrSession = sceneEl.renderer.xr.getSession();
+
+    console.log('✅ XR Session started');
+
+        // 🎯 NOW xrSession is valid → safe to use
+    xrRefSpace = await xrSession.requestReferenceSpace('local');
+    const viewerSpace = await xrSession.requestReferenceSpace('viewer');
+    hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+
+        // 🫀 Start XR loop
+    renderer.setAnimationLoop((time, frame) => {
+      if (frame) onXRFrame(time, frame);
+    });
+
+    setArStatus('AR active — move device to detect surfaces', '#9fffb3');
+    showToast('AR started', 1200);
+    disableARBtn('AR Active');
+
+  // 🎮 interactions // wire select
+    xrSession.addEventListener('select', onSelect);
+
+    xrSession.addEventListener('end', () => {
+      anchors.length = 0;
+      fixedPlacements.length = 0;
+      latestHit = null;
+      latestHitPose = null;
+      hitTestSource = null;
+      xrRefSpace = null;
+      xrSession = null;
+
+      if (arReticle) arReticle.setAttribute('visible','false');
+      
+      setArStatus('AR session ended', '#ffd880');
+      showToast('AR ended', 1000);
+      enableARBtn('Enter AR');
+          
+      try { restoreOverlayForce(); } catch(_) {}
+    });
   }
 
   // Setup capability checks, buttons
@@ -415,6 +423,7 @@ orb.addEventListener('mouseleave', () => {
         if (!sceneEl.is('vr-mode')) {
           sceneEl.enterVR(); // 🚀 starts AR session
         }
+        initAR(); // attaches listener
       });
     }
     
