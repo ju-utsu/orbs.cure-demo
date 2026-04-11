@@ -94,46 +94,46 @@
     });
 
     function collect() {
-  console.log('✨ AR orb collected');
+      console.log('✨ AR orb collected');
 
   // play sound
-  try {
-    document.getElementById('collectSound')?.play()?.catch(()=>{});
-  } catch(_) {}
+      try {
+        document.getElementById('collectSound')?.play()?.catch(()=>{});
+      } catch(_) {}
 
   // remove orb
-  orb.parentNode && orb.parentNode.removeChild(orb);
+      orb.parentNode && orb.parentNode.removeChild(orb);
 
   //  USE SAME GAME SYSTEM
-  if (window.state) {
-    window.state.score = (window.state.score || 0) + 1;
-  }
-
-  if (typeof window.setScore === 'function') {
-    window.setScore(window.state.score);
-  }
+      if (window.state) {
+        window.state.score = (window.state.score || 0) + 1;
+      }
+      
+      if (typeof window.setScore === 'function') {
+        window.setScore(window.state.score);
+      }
     }
     
 
 // REPLACES old listener with BOTH of these
-orb.addEventListener('click', collect);
-orb.addEventListener('touchstart', collect);
+    orb.addEventListener('click', collect);
+    orb.addEventListener('touchstart', collect);
+    
     orb.addEventListener('mouseenter', () => {
-  console.log('👁️ AR Hover start');
-});
-
-orb.addEventListener('mouseleave', () => {
-  console.log('👁️ AR Hover end');
-});
+      console.log('👁️ AR Hover start');
+    });
+    
+    orb.addEventListener('mouseleave', () => {
+      console.log('👁️ AR Hover end');
+    });
+    
     (collectSpawner || sceneEl).appendChild(orb);
     
-    
-  const ray = document.getElementById('cursor');
-  if (ray && ray.components && ray.components.raycaster) {
-    ray.components.raycaster.refreshObjects();
-    console.log('🔄 Raycaster refreshed (AR)');
-  }
-}
+    const ray = document.getElementById('cursor');
+    if (ray && ray.components && ray.components.raycaster) {
+      ray.components.raycaster.refreshObjects();
+      console.log('🔄 Raycaster refreshed (AR)');
+    }
 
     return orb;
   }
