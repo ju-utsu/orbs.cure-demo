@@ -133,7 +133,7 @@ orb.addEventListener('mouseleave', () => {
     ray.components.raycaster.refreshObjects();
     console.log('🔄 Raycaster refreshed (AR)');
   }
-}, 100);
+}
 
     return orb;
   }
