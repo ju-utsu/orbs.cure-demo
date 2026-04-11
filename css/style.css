@@ -83,17 +83,20 @@ a-scene {
 */
 #menuOverlay{
   position:fixed;
-  left:50%; top:50%;
+  top:50%;
+  left:50%; 
   transform:translate(-50%,-50%);
-  z-index:200;
-  width:360px;
-  max-width:92vw;
-  padding:18px;
-  border-radius:14px;
-  color:#fff;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
-  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-  backdrop-filter: blur(8px) saturate(1.05);
+  z-index:9999;
+  width:88%;
+  max-width:420px;
+  padding:21px;
+  border-radius:21px;
+  color:#dbefff;
+  box-shadow: 
+    0 0 30px rgba(0, 200, 255, 0.15),
+    inset 0 0 20px rgba(0, 200, 255, 0.05);
+  background: linear-gradient(150deg, rgba(10,15,25,0.9), rgba(20,30,50,0.75));
+  backdrop-filter: blur(28px) saturate(1.05);
   -webkit-backdrop-filter: blur(8px) saturate(1.05);
   border: 1px solid rgba(255,255,255,0.03);
   transition: opacity .22s ease, transform .22s ease;
@@ -169,15 +172,33 @@ button.primary{
   flex:1 1 auto;
 }
 #menuOverlay button{
-  padding:10px 12px;
+  padding: 8px 12px;
   border-radius:10px;
-  border:1px solid rgba(255,255,255,0.04);
-  background: rgba(12,18,26,0.45);
-  color:#dff6ff;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(145deg, #1a2a40, #0e1624);
+  color:#dbefff;
+  transition: 0.2s;
   cursor:pointer;
   font-weight:700;
   flex:1 1 auto;
   min-width:86px;
+}
+
+#menuOverlay button:hover {
+  box-shadow: 0 0 12px rgba(0,200,255,0.5);
+  transform: scale(1.05);
+}
+
+.music-section {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.25);
+}
+
+#nowPlaying {
+  color: #9fdfff;
+  font-weight: bold;
 }
 
 /* small utilities for buttons */
@@ -243,6 +264,8 @@ button:focus, input:focus{
 
 /* === Music Player Premium Styling (added) === */
 .music-panel {
+  box-shadow: 0 0 20px rgba(0,200,255,0.15),
+              inset 0 0 10px rgba(0,200,255,0.05);
   margin-top: 14px;
   padding: 10px 12px;
   background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
@@ -253,6 +276,7 @@ button:focus, input:focus{
   gap: 10px;
   backdrop-filter: blur(6px) saturate(1.05);
 }
+
 .music-title {
   font-size: 14px;
   font-weight: 700;
@@ -260,12 +284,14 @@ button:focus, input:focus{
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
+
 .music-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
+
 .music-btn {
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
   color: #fff;
@@ -278,9 +304,11 @@ button:focus, input:focus{
   box-shadow: 0 4px 10px rgba(31,156,255,0.18);
   transition: transform 0.18s ease;
 }
+
 .music-btn:hover {
   transform: scale(1.06);
 }
+
 .music-nowplaying {
   text-align: center;
   font-size: 13px;
