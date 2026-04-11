@@ -111,6 +111,7 @@ const game = (function () {
     running: false,
     paused: true,
     score: 0,
+    mode: 'vr',
     orbGazeMs: 150,
     dangerGazeMs: 500,
     timers: new Map(),
@@ -133,6 +134,18 @@ const game = (function () {
   const openMenuBtn = document.getElementById('openMenuBtn');
   const enterVRBtn = document.getElementById('enterVRBtn');
   const sceneEl = document.querySelector('a-scene');
+
+  const sceneRoot = sceneEl;
+  
+  sceneEl?.addEventListener('enter-vr', () => {
+  state.mode = 'vr';
+  console.log('Mode: VR');
+});
+
+sceneEl?.addEventListener('enter-ar', () => {
+  state.mode = 'ar';
+  console.log('Mode: AR');
+});
 
   const collectSpawner = document.getElementById('collect-spawner');
   const dangerSpawner = document.getElementById('danger-spawner');
@@ -166,6 +179,25 @@ const game = (function () {
     return { x: Math.cos(a) * r, y, z: Math.sin(a) * r };
   }
 
+  function attachInteraction(el) {
+  el.addEventListener('click', () => {
+    if (!state.running || state.paused) return;
+    if (!el.parentNode) return;
+
+    const kind = el.dataset.gaze;
+
+    if (kind === 'collect') {
+      try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+      particleBurst(el.object3D.position);
+      el.remove();
+      setScore(state.score + 1);
+    } else if (kind === 'danger') {
+      try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
+      triggerGameOver('Tapped danger');
+    }
+  });
+}
+
   function spawnOrb() {
     const p = randPosAroundPlayer();
     const orb = document.createElement('a-sphere');
@@ -176,7 +208,8 @@ const game = (function () {
     orb.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
     orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random() * 900)}; to: ${p.x} ${p.y + 0.22} ${p.z}; loop: true; easing: easeInOutSine`);
     orb.dataset.gaze = 'collect';
-    (collectSpawner || document.querySelector('a-scene')).appendChild(orb);
+    (collectSpawner || sceneRoot).appendChild(orb);
+    attachInteraction(orb);
 
     setTimeout(() => {
       if (ray && ray.components && ray.components.raycaster) {
@@ -198,7 +231,8 @@ const game = (function () {
     bad.setAttribute('color', '#d43b3b');
     bad.setAttribute('position', `${p.x} ${Math.max(0.5, p.y - 0.6)} ${p.z}`);
     bad.setAttribute('animation__rot', 'property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
-    (dangerSpawner || document.querySelector('a-scene')).appendChild(bad);
+    (collectSpawner || sceneRoot).appendChild(orb);
+    attachInteraction(orb);
 
     setTimeout(() => {
       if (ray && ray.components && ray.components.raycaster) {
@@ -210,7 +244,7 @@ const game = (function () {
   }
 
   const MAX_ORBS_ON_SCREEN = 18;
-  const MAX_DANGER_ON_SCREEN = 11;
+  const MAX_DANGER_ON_SCREEN = 16;
 
   function startSpawners() {
     stopSpawners();
@@ -289,7 +323,7 @@ const game = (function () {
       p.setAttribute('radius', '0.04');
       p.setAttribute('color', '#fff');
       p.object3D.position.set(pos.x, pos.y, pos.z);
-      document.querySelector('a-scene').appendChild(p);
+      sceneRoot.appendChild(p);
       const dx = pos.x + (Math.random() - 0.5) * 0.6;
       const dy = pos.y + Math.random() * 0.8;
       const dz = pos.z + (Math.random() - 0.5) * 0.6;
