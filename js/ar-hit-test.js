@@ -420,7 +420,7 @@
 
     if (enterARBtn && sceneEl) {
       enterARBtn.addEventListener('click', () => {
-        await initAR(); // 👈 attach listener FIRST
+        initAR(); // 👈 attach listener FIRST
         
         if (!sceneEl.is('vr-mode')) {
           sceneEl.enterVR(); // 🚀 starts AR session
