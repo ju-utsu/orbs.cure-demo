@@ -137,16 +137,18 @@ const game = (function () {
 
   const sceneRoot = sceneEl;
   
-  sceneEl?.addEventListener('enter-vr', () => {
+  
   state.mode = 'vr';
-  console.log('Mode: VR');
-});
+  
+  sceneEl?.addEventListener('enter-vr', () => {
+    const session = sceneEl.renderer?.xr?.getSession?.();
+    const isAR = session && session.environmentBlendMode === 'alpha-blend';
+    
+    state.mode = isAR ? 'ar' : 'vr';
+    console.log('Mode:', state.mode);
+  });
 
-sceneEl?.addEventListener('enter-ar', () => {
-  state.mode = 'ar';
-  console.log('Mode: AR');
-});
-
+  
   const collectSpawner = document.getElementById('collect-spawner');
   const dangerSpawner = document.getElementById('danger-spawner');
   const ray = document.getElementById('cursor');
@@ -226,14 +228,14 @@ sceneEl?.addEventListener('enter-ar', () => {
     const bad = document.createElement('a-box');
     bad.classList.add('interactable', 'danger');
     bad.dataset.gaze = 'danger';
-    bad.setAttribute('width', '0.5');
-    bad.setAttribute('height', '0.5');
-    bad.setAttribute('depth', '0.5');
+    bad.setAttribute('width', '0.7');
+    bad.setAttribute('height', '0.7');
+    bad.setAttribute('depth', '0.7');
     bad.setAttribute('color', '#d43b3b');
     bad.setAttribute('position', `${p.x} ${Math.max(0.5, p.y - 0.6)} ${p.z}`);
     bad.setAttribute('animation__rot', 'property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
-    (collectSpawner || sceneRoot).appendChild(orb);
-    attachInteraction(orb);
+    (collectSpawner || sceneRoot).appendChild(bad);
+    attachInteraction(bad);
 
     setTimeout(() => {
       if (ray && ray.components && ray.components.raycaster) {
@@ -244,8 +246,8 @@ sceneEl?.addEventListener('enter-ar', () => {
     return bad;
   }
 
-  const MAX_ORBS_ON_SCREEN = 18;
-  const MAX_DANGER_ON_SCREEN = 16;
+  const MAX_ORBS_ON_SCREEN = 16;
+  const MAX_DANGER_ON_SCREEN = 36;
 
   function startSpawners() {
     stopSpawners();
@@ -411,10 +413,13 @@ sceneEl?.addEventListener('enter-ar', () => {
   function restartGame() {
     const cs = collectSpawner ? Array.from(collectSpawner.children) : Array.from(document.querySelectorAll('.collectable'));
     cs.forEach(c => c.remove && c.remove());
+    
     const ds = dangerSpawner ? Array.from(dangerSpawner.children) : Array.from(document.querySelectorAll('.danger'));
     ds.forEach(d => d.remove && d.remove());
+    
     const panel = document.getElementById('gameOverPanel');
     if (panel) panel.setAttribute('visible', 'false');
+    
     startGame();
   }
 
