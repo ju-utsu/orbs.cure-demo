@@ -99,7 +99,6 @@
   <!-- ======= A-Frame Scene (3D canvas) ======= -->
   <a-scene
   id="scene"
-  embedded
   renderer="antialias: true; alpha: true"
   background="color: transparent"
   vr-mode-ui="enabled: true"
@@ -124,13 +123,14 @@
                 color="#bfe5ff"></a-ring>
 
         <a-entity 
-  id="cursor"
-  cursor="fuse: true; fuseTimeout: 600"
-  raycaster="objects: .interactable; interval: 20; far: 5"
-  position="0 0 -1"
-  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
-  material="color: white; shader: flat">
-</a-entity>
+          id="cursor"
+          cursor="fuse: true; fuseTimeout: 700"
+          raycaster="objects: .interactable; interval: 11; far: 45"
+          rayOrigin="entity"
+          position="0 0 -1"
+          geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+          material="color: white; shader: flat">
+        </a-entity>
 
         <!-- raycaster used for gaze interactions -->
   
