@@ -449,13 +449,7 @@ sceneEl?.addEventListener('enter-ar', () => {
         await scene.requestFullscreen();
       } catch (e) {}
     }
-
-    // ENTER VR DIRECTLY (no timeout needed)
-    if (scene && !scene.is('vr-mode')) {
-      scene.enterVR();
-    }
-  });
-    }
+  }
     
     if (startBtn) startBtn.addEventListener('click', () => {
       try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
