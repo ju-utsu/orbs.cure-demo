@@ -1,5 +1,6 @@
 // js/ar-hit-test.js
 // Anchors-enabled AR placement for Orbs.cure
+// ✨ NOW FULLY INTEGRATED WITH ARCADE MODE!
 // - Places spawned objects as XR anchors when possible so they stick to real surfaces
 // - Falls back to fixed-pose placement if anchors aren't supported
 // - Updates anchored objects each XR frame using frame.getPose(anchor.anchorSpace, xrRefSpace)
@@ -83,7 +84,6 @@
     }
 
     // (safe float effect
-
     orb.setAttribute('animation__float', {
       property: 'object3D.position.y',
       dir: 'alternate',
@@ -94,23 +94,37 @@
     });
 
     function collect() {
-      console.log('✨ AR orb collected');
-
-  // play sound
+      // play sound
       try {
         document.getElementById('collectSound')?.play()?.catch(()=>{});
       } catch(_) {}
-
-  // remove orb
+      // remove orb
+      const pos = orb.object3D.position;
       orb.parentNode && orb.parentNode.removeChild(orb);
 
+      console.log('✨ AR orb collected');
+
+      // ✨ FIX: AR placed orbs now trigger Arcade Combos and Floating Text!
   //  USE SAME GAME SYSTEM
-      if (window.state) {
-        window.state.score = (window.state.score || 0) + 1;
-      }
-      
-      if (typeof window.setScore === 'function') {
-        window.setScore(window.state.score);
+      if (window.state && typeof window.setScore === 'function') {
+        window.state.combo++;
+        clearTimeout(window.state.comboTimer);
+        window.state.comboTimer = setTimeout(() => { window.state.combo = 0; }, 4000);
+        
+        const pts = 1 * window.state.combo;
+        window.setScore((window.state.score || 0) + pts);
+        
+        // Spawn the floating text
+        const txt = document.createElement('a-text');
+        txt.setAttribute('value', window.state.combo > 1 ? `+${pts} (x${window.state.combo})` : `+${pts}`);
+        txt.setAttribute('color', window.state.combo > 1 ? "#ffd84d" : "#fff");
+        txt.setAttribute('align', 'center');
+        txt.setAttribute('width', '3');
+        txt.setAttribute('position', `${pos.x} ${pos.y + 0.3} ${pos.z}`);
+        txt.setAttribute('animation__pos', `property: position; to: ${pos.x} ${pos.y + 1.2} ${pos.z}; dur: 1200; easing: easeOutQuad`);
+        txt.setAttribute('animation__opa', `property: opacity; to: 0; dur: 1200; easing: easeInQuad`);
+        (collectSpawner || sceneEl).appendChild(txt);
+        setTimeout(() => txt.parentNode && txt.remove(), 1250);
       }
     }
     
@@ -134,7 +148,6 @@
       ray.components.raycaster.refreshObjects();
       console.log('🔄 Raycaster refreshed (AR)');
     }
-
     return orb;
   }
 
@@ -229,7 +242,18 @@
     if(!xrSession){
       console.warn('no xrSession for select');
       return;
+
+    // ✨ FIX: Stop Ghost Anchors!
+    // Check if the raycaster is aiming at an existing Arcade object. 
+    // If it is, DO NOT place an anchor on the wall behind it. Let the player collect it!
+    const ray = document.getElementById('cursor');
+    if (ray && ray.components && ray.components.raycaster) {
+      const hits = ray.components.raycaster.intersectedEls;
+      if (hits && hits.length > 0) {
+        return; // Exit out of the AR placement logic completely.
+      }
     }
+      
 
     if(latestHit && typeof latestHit.createAnchor === 'function'){
       // Best: create anchor from hit test result
@@ -301,11 +325,8 @@
       showToast('Placed fixed orb (fallback)');
       return;
     }
-
     showToast('No surface to place on');
   }
-
-
 
 
 
@@ -341,6 +362,20 @@
     }
   }
 
+
+  // ✨ FIX: Safe A-Frame Render Loop Hook
+  // Creates a permanent A-Frame component to handle our AR loop instead of crashing the renderer.
+  if (typeof AFRAME !== 'undefined' && !AFRAME.components['ar-hit-test-loop']) {
+    AFRAME.registerComponent('ar-hit-test-loop', {
+      tick: function (time, timeDelta) {
+        if (xrSession) {
+          const frame = this.el.sceneEl.frame;
+          if (frame) onXRFrame(time, frame);
+        }
+      }
+    });
+  }
+
   // 🌟 NOW IT LIVES HERE (GLOBAL INSIDE IIFE)
   async function onSessionStart() {
     const renderer = sceneEl.renderer;
@@ -368,20 +403,24 @@
 
         // 🫀 Start XR loop
     // 🫀 Safely hook into A-Frame's existing render loop without breaking it
-    const originalRender = renderer.render;
-    renderer.render = function (scene, camera) {
+    //const originalRender = renderer.render;
+    //renderer.render = function (scene, camera) {
         // Only run our AR logic if the session is active and we have a frame
-        if (xrSession) {
-            const frame = renderer.xr.getFrame();
-            if (frame) {
-                onXRFrame(performance.now(), frame);
-            }
-        }
+        //if (xrSession) {
+            //const frame = renderer.xr.getFrame();
+            //if (frame) {
+                //onXRFrame(performance.now(), frame);
+            //}
+        //}
         // Call the original A-Frame renderer so the 3D world still draws!
-        originalRender.call(this, scene, camera);
-    };
-    
+        //originalRender.call(this, scene, camera);
+    //};
 
+    // ✨ Attach the safe render loop component
+    if (!sceneEl.hasAttribute('ar-hit-test-loop')) {
+      sceneEl.setAttribute('ar-hit-test-loop', '');
+    }
+    
     setArStatus('AR active — move device to detect surfaces', '#9fffb3');
     showToast('AR started', 1200);
     disableARBtn('AR Active');
@@ -409,44 +448,45 @@
   }
 
   // Setup capability checks, buttons
-  function setup() {
-    if(!enterARBtn){ setArStatus('AR UI missing', '#ffd880'); } else { enterARBtn.style.display='inline-block'; setArStatus('Checking WebXR availability...'); }
-
-    if(!('xr' in navigator)){
-      setArStatus('navigator.xr missing — AR not available', '#ff8080');
-      if(enterARBtn) enterARBtn.style.display='none';
-    } else if(typeof navigator.xr.isSessionSupported === 'function'){
-      navigator.xr.isSessionSupported('immersive-ar').then((supported)=>{
-        if(supported){ setArStatus('AR supported — tap Enter AR', '#9fffb3'); if(enterARBtn) enableARBtn('Enter AR'); }
-        else { setArStatus('AR not advertised — try Enter AR (may still work)', '#ffd880'); if(enterARBtn) enableARBtn('Enter AR'); }
-      }).catch(err => {
-        console.warn('isSessionSupported error', err);
-        setArStatus('AR check failed — try Enter AR', '#ffd880');
+    function setup() {
+      if(!enterARBtn){ setArStatus('AR UI missing', '#ffd880'); } else { enterARBtn.style.display='inline-block'; setArStatus('Checking WebXR availability...'); }
+      
+      if(!('xr' in navigator)){
+        setArStatus('navigator.xr missing — AR not available', '#ff8080');
+        if(enterARBtn) enterARBtn.style.display='none';
+      } else if(typeof navigator.xr.isSessionSupported === 'function'){
+        navigator.xr.isSessionSupported('immersive-ar').then((supported)=>{
+          if(supported){ setArStatus('AR supported — tap Enter AR', '#9fffb3'); if(enterARBtn) enableARBtn('Enter AR'); }
+          else { setArStatus('AR not advertised — try Enter AR (may still work)', '#ffd880'); if(enterARBtn) enableARBtn('Enter AR'); }
+        }).catch(err => {
+          console.warn('isSessionSupported error', err);
+          setArStatus('AR check failed — try Enter AR', '#ffd880');
+          if(enterARBtn) enableARBtn('Enter AR');
+        });
+      } else {
+        setArStatus('AR check unavailable — try Enter AR', '#ffd880');
         if(enterARBtn) enableARBtn('Enter AR');
-      });
-    } else {
-      setArStatus('AR check unavailable — try Enter AR', '#ffd880');
-      if(enterARBtn) enableARBtn('Enter AR');
-    }
-
-    if (enterARBtn && sceneEl) {
-      enterARBtn.addEventListener('click', () => {
-        if (!sceneEl.hasLoaded) {
-           showToast("Scene still loading...");
-           return;
-        }
+      }
+      
+      if (enterARBtn && sceneEl) {
+        enterARBtn.addEventListener('click', () => {
+          if (!sceneEl.hasLoaded) {
+            showToast("Scene still loading...");
+            return;
+          }
         
         // Use A-Frame's system to request AR specifically
-        const xrSystem = sceneEl.systems.webxr;
-        if (xrSystem) {
+          const xrSystem = sceneEl.systems.webxr;
+          if (xrSystem) {
             // We tell A-Frame we want AR
             xrSystem.sessionConfiguration = { mode: 'immersive-ar' };
             sceneEl.enterVR(); // A-Frame will now request an immersive-ar session
             initAR(); // Set up our listeners for when the session actually starts
-        } else {
+          } else {
             showToast("WebXR system not found in A-Frame.");
-        }
-      });
+          }
+        });
+      }
     }
     
     // debug: ?arforce=1 to force the button and debug info
@@ -467,7 +507,7 @@
       }
     } catch(_) {}
   }
-
+  
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
   else setup();
 
