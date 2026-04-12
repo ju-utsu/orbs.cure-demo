@@ -428,14 +428,29 @@ const game = (function () {
     stopSpawners();
     state.timers.forEach(t => clearTimeout(t));
     state.timers.clear();
+    
     const panel = document.getElementById('gameOverPanel');
-    if (panel) panel.setAttribute('visible', 'true');
+    if (panel) {
+      panel.setAttribute('visible', 'true');
+      panel.setAttribute('position', '0 0 0'); // ✨ Bring panel down to eye level
+    }
+    
     const got = document.getElementById('gameOverText');
     if (got) got.setAttribute('value', msg);
     showToast(msg);
     openMenu();
   }
 
+  // Refresh raycaster so it notices the newly moved button
+  setTimeout(() => {
+    if (ray && ray.components && ray.components.raycaster) {
+      ray.components.raycaster.refreshObjects();
+    }
+  }, 50);
+}
+
+
+              
   function restartGame() {
     const cs = collectSpawner ? Array.from(collectSpawner.children) : Array.from(document.querySelectorAll('.collectable'));
     cs.forEach(c => c.remove && c.remove());
@@ -444,7 +459,10 @@ const game = (function () {
     ds.forEach(d => d.remove && d.remove());
     
     const panel = document.getElementById('gameOverPanel');
-    if (panel) panel.setAttribute('visible', 'false');
+    if (panel) {
+      panel.setAttribute('visible', 'false');
+      panel.setAttribute('position', '0 999 0'); // ✨ Banish panel back to the sky
+    }
     
     startGame();
   }
