@@ -516,7 +516,8 @@ const game = (function () {
 }
       
 
-  // debug helpers
+
+// debug helpers
 window._orbsGame = {
   startGame,
   restartGame,
