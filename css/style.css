@@ -91,14 +91,23 @@ a-scene {
   max-width:420px;
   padding:21px;
   border-radius:21px;
-  color:#dbefff;
+  color:#eaf6ff;
+  /* ✨ LIGHT GLASS LOOK */
+
   box-shadow: 
-    0 0 30px rgba(0, 200, 255, 0.15),
-    inset 0 0 20px rgba(0, 200, 255, 0.05);
-  background: linear-gradient(150deg, rgba(10,15,25,0.9), rgba(20,30,50,0.75));
-  backdrop-filter: blur(28px) saturate(1.05);
-  -webkit-backdrop-filter: blur(8px) saturate(1.05);
-  border: 1px solid rgba(255,255,255,0.03);
+    0 8px 40px rgba(0,0,0,0.25),
+    inset 0 0 20px rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    150deg,
+    rgba(255,255,255,0.16),
+    rgba(255,255,255,0.08)
+  );
+  
+  backdrop-filter: blur(25px) saturate(1.1);
+  -webkit-backdrop-filter: blur(21px) saturate(1.1);
+  
+  border: 1px solid rgba(255,255,255,0.25);
+  
   transition: opacity .22s ease, transform .22s ease;
   display:block;
   pointer-events:auto;
@@ -139,6 +148,20 @@ a-scene {
   border-radius:20px;
 }
 
+#menuOverlay::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:21px;
+  background: linear-gradient(
+    120deg,
+    rgba(0,150,255,0.15),
+    rgba(255,255,255,0.05),
+    rgba(0,200,255,0.12)
+  );
+  pointer-events:none;
+}
+
 /* When hidden via aria-hidden, make it non-blocking and transparent */
 #menuOverlay[aria-hidden="true"]{
   opacity:0;
@@ -152,16 +175,17 @@ a-scene {
   margin:0 0 10px 0;
   font-size:18px;
   letter-spacing:0.3px;
+  color: #ffffff;
 }
 .field{ margin-bottom:8px; }
-.field label{ display:block; font-size:13px; margin-bottom:6px; color: #dbefff; }
+.field label {color: rgba(255,255,255,0.85);}
 .field input{
   width:100%;
   padding:8px 10px;
   border-radius:8px;
-  border:1px solid rgba(255,255,255,0.06);
-  background: rgba(6,12,18,0.45);
-  color:#fff;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
   box-sizing:border-box;
   font-size:13px;
 }
@@ -183,12 +207,14 @@ button.primary{
   font-weight:800;
   flex:1 1 auto;
 }
+
 #menuOverlay button{
   padding: 8px 12px;
   border-radius:10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: linear-gradient(145deg, #1a2a40, #0e1624);
-  color:#dbefff;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color:#ffffff;
+  backdrop-filter: blur(6px)
   transition: 0.2s;
   cursor:pointer;
   font-weight:700;
@@ -197,7 +223,8 @@ button.primary{
 }
 
 #menuOverlay button:hover {
-  box-shadow: 0 0 12px rgba(0,200,255,0.5);
+  background: rgba(255,255,255,0.22);
+  box-shadow: 0 0 16px rgba(255,255,255,0.25);
   transform: scale(1.05);
 }
 
@@ -287,13 +314,13 @@ button:focus, input:focus{
               inset 0 0 10px rgba(0,200,255,0.05);
   margin-top: 14px;
   padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.01));
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.25);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  backdrop-filter: blur(6px) saturate(1.05);
+  backdrop-filter: blur(8px) saturate(1.01);
 }
 
 .music-title {
@@ -320,7 +347,7 @@ button:focus, input:focus{
   cursor: pointer;
   font-weight: 700;
   font-size: 13px;
-  box-shadow: 0 4px 10px rgba(31,156,255,0.18);
+  box-shadow: 0 4px 10px rgba(31,156,255,0.16);
   transition: transform 0.18s ease;
 }
 
