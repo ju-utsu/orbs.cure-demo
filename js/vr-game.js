@@ -457,14 +457,26 @@ const game = (function () {
     }
     
     if (startBtn) startBtn.addEventListener('click', () => {
+      console.log('Start Game clicked');
       try { musicManager.init(); musicManager.play(); } catch (e) { console.warn('music start failed', e); }
       startGame();
     });
-    if (saveBtn) saveBtn.addEventListener('click', () => { closeMenuSave(); try { musicManager.init(); musicManager.play(); } catch (e) {} });
-    if (restartBtn) restartBtn.addEventListener('click', restartGame);
+    
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+      console.log('Save clicked');
+      closeMenuSave();
+      try { musicManager.init(); musicManager.play(); } catch (e) {console.warn(e);}
+    });
+    
+    if (restartBtn) restartBtn.addEventListener('click',  () => {
+      console.log('Restart clicked');
+      restartGame);
+    });
+      
     if (openMenuBtn) openMenuBtn.addEventListener('click', openMenu);
   }
 
+  
   // init
   document.addEventListener('DOMContentLoaded', () => {
     state.paused = true;
