@@ -460,9 +460,19 @@ const game = (function () {
 
   // init
   document.addEventListener('DOMContentLoaded', () => {
-    try { musicManager.init(); } catch (e) { /* silent */ }
-    if (overlay) { overlay.setAttribute('aria-hidden', 'false'); overlay.style.pointerEvents = 'auto'; }
+    state.paused = true;
+    state.running = false;
+    
+    try {
+      musicManager.init();
+    } catch (e) { /* silent */ }
+    
+    if (overlay) {
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+    
     setScore(0);
+    
     if (timeVal) timeVal.textContent = state.roundTime;
     wireUI();
   });
