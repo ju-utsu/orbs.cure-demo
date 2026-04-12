@@ -426,27 +426,35 @@ const game = (function () {
   // UI wiring
   function wireUI() {
     if (enterVRBtn) {
-  enterVRBtn.addEventListener('click', async () => {
-    console.log('VR button clicked');
-
-    const scene = document.querySelector('a-scene');
+      enterVRBtn.addEventListener('click', async () => {
+        console.log('VR button clicked');
+        
+        const scene = document.querySelector('a-scene');
+        
+        if (!scene) return;
 
     //  allow interaction
-    document.body.classList.add('scene-interactive');
+        document.body.classList.add('scene-interactive');
 
     //  iOS/Android motion permission 
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
-      try {
-        await DeviceMotionEvent.requestPermission();
-      } catch (e) {}
-    }
+        if (typeof DeviceMotionEvent !== 'undefined' &&
+            typeof DeviceMotionEvent.requestPermission === 'function') {
+          try {
+            await DeviceMotionEvent.requestPermission();
+          } catch (e) {}
+        }
 
     // ENTER VR DIRECTLY (no timeout needed)
-    if (scene && !scene.is('vr-mode')) {
-      scene.enterVR();
-    }
-  });
+        try {
+          if (scene.is('vr-mode')) {
+            scene.exitVR();
+          } else {
+            scene.enterVR(true); // 👈 magic fix
+          }
+        } catch (e) {
+          console.warn('VR failed:', e);
+        }
+      });
     }
     
     if (startBtn) startBtn.addEventListener('click', () => {
