@@ -129,7 +129,14 @@ const game = (function () {
     timers: new Map(),
     roundTimer: null,
     roundTime: 360,
-    spawnIntervals: { orb: null, danger: null }
+    spawnIntervals: { orb: null, danger: null },
+    // ✨ NEW ARCADE STATE VARIABLES
+    wave: 1,
+    combo: 0,
+    comboTimer: null,
+    shieldActive: false,
+    isFrozen: false,
+    freezeTimer: null
   };
   window.state = state; // for debugging
 
@@ -147,7 +154,6 @@ const game = (function () {
   const enterVRBtn = document.getElementById('enterVRBtn');
   const enterARBtn = document.getElementById('enterARBtn');
   const sceneEl = document.querySelector('a-scene');
-
   const sceneRoot = sceneEl;
   
   
@@ -169,7 +175,7 @@ const game = (function () {
 
   // helpers
   function showToast(msg, ms = 1200) {
-    if (!toast) return console.log('[TOAST]', msg);
+    if (!toast) return;
     toast.textContent = msg;
     toast.hidden = false;
     toast.style.display = 'block';
@@ -182,7 +188,6 @@ const game = (function () {
     if (scoreVal) scoreVal.textContent = String(v);
     const vrScore = document.getElementById('vrScore');
     if (vrScore) vrScore.setAttribute('value', `Score: ${v}`);
-    window.state && (window.state.score = v);
   }
   window.setScore = setScore;
 
@@ -194,24 +199,112 @@ const game = (function () {
     return { x: Math.cos(a) * r, y, z: Math.sin(a) * r };
   }
 
+  // ✨ NEW: Floating 3D Arcade Text
+  function spawnFloatingText(pos, text, color = '#fff') {
+    const txt = document.createElement('a-text');
+    txt.setAttribute('value', text);
+    txt.setAttribute('color', color);
+    txt.setAttribute('align', 'center');
+    txt.setAttribute('width', '3');
+    txt.setAttribute('position', `${pos.x} ${pos.y + 0.3} ${pos.z}`);
+    txt.setAttribute('animation__pos', `property: position; to: ${pos.x} ${pos.y + 1.2} ${pos.z}; dur: 1200; easing: easeOutQuad`);
+    txt.setAttribute('animation__opa', `property: opacity; to: 0; dur: 1200; easing: easeInQuad`);
+    sceneRoot.appendChild(txt);
+    setTimeout(() => txt.parentNode && txt.remove(), 1250);
+  }
+
+  // ✨ NEW: Power-Up Spawner
+  function spawnPowerUp() {
+    const p = randPosAroundPlayer();
+    const power = document.createElement('a-sphere');
+    power.classList.add('interactable', 'powerup', 'collectable');
+    power.setAttribute('radius', '0.25');
+    
+    const type = Math.random();
+    let pType = 'time'; let color = '#4dff88'; // Green
+    if (type > 0.66) { pType = 'freeze'; color = '#4dffff'; } // Blue
+    else if (type > 0.33) { pType = 'shield'; color = '#d94dff'; } // Purple
+    
+    power.dataset.gaze = 'powerup';
+    power.dataset.ptype = pType;
+    power.setAttribute('material', 'shader: standard; emissiveIntensity: 2');
+    power.setAttribute('color', color);
+    power.setAttribute('emissive', color);
+    power.setAttribute('position', `${p.x} ${p.y} ${p.z}`);
+    power.setAttribute('animation__float', `property: position; dir: alternate; dur: 800; to: ${p.x} ${p.y + 0.3} ${p.z}; loop: true`);
+    
+    (collectSpawner || sceneRoot).appendChild(power);
+    refreshRaycaster();
+  }
+
+
+  
   function attachInteraction(el) {
-  el.addEventListener('click', () => {
-    if (!state.running || state.paused) return;
-    if (!el.parentNode) return;
-
-    const kind = el.dataset.gaze;
-
-    if (kind === 'collect') {
-      try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
-      particleBurst(el.object3D.position);
+    el.addEventListener('click', () => {
+      if (!state.running || state.paused) return;
+      if (!el.parentNode) return;
+      
+      const kind = el.dataset.gaze;
+      const pos = el.object3D ? el.object3D.position : null;
+      
+      if (kind === 'collect') {
+        try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+        if (pos) particleBurst(pos);
       el.remove();
-      setScore(state.score + 1);
+
+      // ✨ COMBOS & SCORING FOR TAPS
+      state.combo++;
+      clearTimeout(state.comboTimer);
+      state.comboTimer = setTimeout(() => { state.combo = 0; }, 4000);
+        
+      const pts = 1 * state.combo;
+      setScore(state.score + pts);
+      if (pos) spawnFloatingText(pos, state.combo > 1 ? `+${pts} (x${state.combo})` : `+${pts}`, state.combo > 1 ? "#ffd84d" : "#fff");
+
+      // ✨ WAVE PROGRESSION
+      if (state.score >= 40 && state.wave === 2) {
+        state.wave = 3; showToast("WAVE 3: Moving Dangers!", 3000); startSpawners();
+      } else if (state.score >= 15 && state.wave === 1) {
+        state.wave = 2; showToast("WAVE 2: Speed Up!", 3000); startSpawners();
+      }
+    
+    } else if (kind === 'powerup') {
+      try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+      const pType = el.dataset.ptype; el.remove();
+      
+      if (pType === 'time') {
+        state.roundTime += 15;
+        if (pos) spawnFloatingText(pos, "+15s Time!", "#4dff88");
+      } else if (pType === 'freeze') {
+        state.isFrozen = true;
+        if (pos) spawnFloatingText(pos, "Time Freeze!", "#4dffff");
+        document.querySelectorAll('.danger').forEach(d => d.pause());
+        clearTimeout(state.freezeTimer);
+        state.freezeTimer = setTimeout(() => {
+          state.isFrozen = false;
+          if(state.running && !state.paused) document.querySelectorAll('.danger').forEach(d => d.play());
+        }, 5000);
+      } else if (pType === 'shield') {
+        state.shieldActive = true;
+        if (pos) spawnFloatingText(pos, "Shield Active!", "#d94dff");
+      }
+    
     } else if (kind === 'danger') {
-      try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
-      triggerGameOver('Tapped danger');
+      if (state.shieldActive) {
+        state.shieldActive = false;
+        el.remove();
+        try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+        if (pos) spawnFloatingText(pos, "Shield Broken!", "#ff6b6b");
+      } else {
+        try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
+        triggerGameOver('Tapped danger');
+      }
     }
   });
 }
+
+      
+
 
   function spawnOrb() {
     const p = randPosAroundPlayer();
@@ -225,13 +318,8 @@ const game = (function () {
     orb.setAttribute('animation__float', `property: position; dir: alternate; dur: ${1800 + Math.floor(Math.random() * 900)}; to: ${p.x} ${p.y + 0.22} ${p.z}; loop: true; easing: easeInOutSine`);
     orb.dataset.gaze = 'collect';
     (collectSpawner || sceneRoot).appendChild(orb);
+    refreshRaycaster();
     attachInteraction(orb);
-
-    setTimeout(() => {
-      if (ray && ray.components && ray.components.raycaster) {
-        ray.components.raycaster.refreshObjects();
-      }
-    }, 50);
 
     return orb;
   }
@@ -247,34 +335,53 @@ const game = (function () {
     bad.setAttribute('color', '#d43b3b');
     bad.setAttribute('position', `${p.x} ${Math.max(0.5, p.y - 0.6)} ${p.z}`);
     bad.setAttribute('animation__rot', 'property: rotation; to: 0 360 0; dur: 6000; loop:true; easing:linear');
-    (collectSpawner || sceneRoot).appendChild(bad);
-    attachInteraction(bad);
 
-    setTimeout(() => {
-      if (ray && ray.components && ray.components.raycaster) {
-        ray.components.raycaster.refreshObjects();
-      }
-    }, 0);
+    // ✨ WAVES: Moving Danger Cubes!
+    if (state.wave >= 3) {
+      bad.setAttribute('animation__move', `property: position; dir: alternate; dur: 3000; loop: true; easing: easeInOutSine; to: ${p.x + (Math.random() > 0.5 ? 1.5 : -1.5)} ${p.y} ${p.z + (Math.random() > 0.5 ? 1.5 : -1.5)}`);
+    }
     
+    (collectSpawner || sceneRoot).appendChild(bad);
+    refreshRaycaster();
+    
+    attachInteraction(bad);
     return bad;
   }
 
+  
+  function refreshRaycaster() {
+    setTimeout(() => {
+      if (ray && ray.components && ray.components.raycaster) ray.components.raycaster.refreshObjects();
+    }, 50);
+  }
+
+
   const MAX_ORBS_ON_SCREEN = 84;
   const MAX_DANGER_ON_SCREEN = 63;
+  
 
   function startSpawners() {
     stopSpawners();
+    // ✨ WAVES: Faster spawns as you progress
+    let orbRate = state.wave === 3 ? 500 : state.wave === 2 ? 650 : 800;
+    let dangerRate = state.wave === 3 ? 1200 : state.wave === 2 ? 1500 : 1800;
+    
     state.spawnIntervals.orb = setInterval(() => {
       if (!state.running || state.paused) return;
       const count = collectSpawner ? collectSpawner.children.length : document.querySelectorAll('.collectable').length;
-      if (count < MAX_ORBS_ON_SCREEN) spawnOrb();
-    }, 800);
+      if (count < MAX_ORBS_ON_SCREEN) {
+        if (Math.random() < 0.1) spawnPowerUp(); // 10% chance
+        else spawnOrb();
+      }
+    }, orbRate);
+
     state.spawnIntervals.danger = setInterval(() => {
-      if (!state.running || state.paused) return;
-      const count = dangerSpawner ? dangerSpawner.children.length : document.querySelectorAll('.danger').length;
+      if (!state.running || state.paused || state.isFrozen) return; // Don't spawn if time is frozen!
+      const count = document.querySelectorAll('.danger').length;
       if (count < MAX_DANGER_ON_SCREEN) spawnDanger();
-    }, 1800);
+    }, dangerRate);
   }
+    
 
   function stopSpawners() {
     if (state.spawnIntervals.orb) clearInterval(state.spawnIntervals.orb);
@@ -303,6 +410,11 @@ const game = (function () {
     
     if (reticle) {
       reticle.setAttribute('scale', '1.6 1.6 1');
+      let rColor = '#fff';
+      if (kind === 'collect') rColor = '#ffd84d';
+      else if (kind === 'danger') rColor = state.shieldActive ? '#d94dff' : '#ff6b6b'; // Reticle turns purple if shield is active!
+      else if (kind === 'powerup') rColor = el.getAttribute('color');
+      reticle.setAttribute('color', rColor);
       // Add blue color for the restart button
       reticle.setAttribute('color', (kind === 'collect') ? '#ffd84d' : '#ff6b6b');
     }
@@ -318,15 +430,63 @@ const game = (function () {
       if (kind !== 'restart' && (!state.running || state.paused)) return;
       if (!el.parentNode && kind !== 'restart') return;
 
+      const pos = el.object3D ? el.object3D.position : null;
+
       if (kind === 'collect') {
         try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
         const pos = el.object3D.position;
-        particleBurst(pos);
-        el.parentNode && el.parentNode.removeChild(el);
-        setScore(state.score + 1);
+        particleBurst(pos); el.remove();
+
+        // ✨ COMBOS & SCORING
+        state.combo++;
+        clearTimeout(state.comboTimer);
+        state.comboTimer = setTimeout(() => { state.combo = 0; }, 4000); // 4 seconds to keep combo alive
+        
+        const pts = 1 * state.combo;
+        setScore(state.score + pts);
+        spawnFloatingText(pos, state.combo > 1 ? `+${pts} (x${state.combo})` : `+${pts}`, state.combo > 1 ? "#ffd84d" : "#fff");
+
+        // ✨ WAVE PROGRESSION
+        if (state.score >= 40 && state.wave === 2) {
+          state.wave = 3; showToast("WAVE 3: Moving Dangers!", 3000); startSpawners();
+        } else if (state.score >= 15 && state.wave === 1) {
+          state.wave = 2; showToast("WAVE 2: Speed Up!", 3000); startSpawners();
+        }
+
+      } else if (kind === 'powerup') {
+        try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+        const pType = el.dataset.ptype; el.remove();
+        
+        if (pType === 'time') {
+          state.roundTime += 15;
+          spawnFloatingText(pos, "+15s Time!", "#4dff88");
+        } else if (pType === 'freeze') {
+          state.isFrozen = true;
+          spawnFloatingText(pos, "Time Freeze!", "#4dffff");
+          document.querySelectorAll('.danger').forEach(d => d.pause()); // Freeze animations
+          clearTimeout(state.freezeTimer);
+          state.freezeTimer = setTimeout(() => {
+            state.isFrozen = false;
+            if(state.running && !state.paused) document.querySelectorAll('.danger').forEach(d => d.play());
+          }, 5000);
+        } else if (pType === 'shield') {
+          state.shieldActive = true;
+          spawnFloatingText(pos, "Shield Active!", "#d94dff");
+        }
+
       } else if (kind === 'danger') {
-        try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
-        triggerGameOver('Gazed at danger');
+        // ✨ SHIELD SAVIOR
+        if (state.shieldActive) {
+          state.shieldActive = false;
+          el.remove();
+          try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+          spawnFloatingText(pos, "Shield Broken!", "#ff6b6b");
+          
+        
+        } else {
+          try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
+          triggerGameOver('Gazed at danger');
+        }
       } else if (kind === 'restart') {
         // ✨ Trigger restart from inside VR!
         try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
@@ -368,6 +528,7 @@ const game = (function () {
     // disable scene interactions while menu is open
     document.body.classList.remove('scene-interactive');
     state.paused = true;
+    if (state.isFrozen) document.querySelectorAll('.danger').forEach(d => d.pause());
     showToast('Menu opened');
   }
 
@@ -387,7 +548,9 @@ const game = (function () {
     state.orbGazeMs = parseInt(orbInput.value) || state.orbGazeMs;
     state.dangerGazeMs = parseInt(dangerInput.value) || state.dangerGazeMs;
     showToast('Settings saved');
+    if (!state.isFrozen) document.querySelectorAll('.danger').forEach(d => d.play());
   }
+  
 
   function startRoundTimer() {
     clearInterval(state.roundTimer);
@@ -400,11 +563,19 @@ const game = (function () {
       if (state.roundTime <= 0) { clearInterval(state.roundTimer); triggerGameOver("Time's up"); }
     }, 1000);
   }
+  
 
   function startGame() {
     closeMenuSave();
     state.running = true;
     state.paused = false;
+
+    // ✨ Reset Arcade Stats
+    state.wave = 1;
+    state.combo = 0;
+    state.shieldActive = false;
+    state.isFrozen = false;
+    clearTimeout(state.freezeTimer);
     setScore(0);
 
     for (let i = 0; i < 6; i++) spawnOrb();
@@ -421,11 +592,13 @@ const game = (function () {
         canvas.requestPointerLock();
       }
     } catch (e) {
-  // not critical — pointer lock may fail (mobile browsers often don't support it)
+      // not critical — pointer lock may fail (mobile browsers often don't support it)
       console.debug('pointer lock request failed or unsupported', e);
     }
   }
+              
 
+              
   function triggerGameOver(msg) {
     state.running = false;
     state.paused = true;
@@ -441,32 +614,23 @@ const game = (function () {
     
     const got = document.getElementById('gameOverText');
     if (got) got.setAttribute('value', msg);
-    showToast(msg);
-    openMenu();
+    showToast(msg); openMenu();
+    refreshRaycaster(); // Refresh raycaster so it notices the newly moved button
+  }
+  
 
-  // Refresh raycaster so it notices the newly moved button
-  setTimeout(() => {
-    if (ray && ray.components && ray.components.raycaster) {
-      ray.components.raycaster.refreshObjects();
-    }
-  }, 50);
-}
 
 
               
   function restartGame() {
-    const cs = collectSpawner ? Array.from(collectSpawner.children) : Array.from(document.querySelectorAll('.collectable'));
-    cs.forEach(c => c.remove && c.remove());
-    
-    const ds = dangerSpawner ? Array.from(dangerSpawner.children) : Array.from(document.querySelectorAll('.danger'));
-    ds.forEach(d => d.remove && d.remove());
+    // This single line safely deletes all orbs, dangers, and powerups!
+    document.querySelectorAll('.collectable, .danger').forEach(e => e.remove());
     
     const panel = document.getElementById('gameOverPanel');
     if (panel) {
       panel.setAttribute('visible', 'false');
       panel.setAttribute('position', '0 999 0'); // ✨ Banish panel back to the sky
     }
-    
     startGame();
   }
 
