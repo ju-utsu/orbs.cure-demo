@@ -95,16 +95,15 @@ a-scene {
   /* ✨ LIGHT GLASS LOOK */
 
   box-shadow: 
-    0 8px 40px rgba(0,0,0,0.25),
-    inset 0 0 20px rgba(255, 255, 255, 0.08);
+    0 8px 40px rgba(0,0,0,0.15),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
   background: linear-gradient(
     150deg,
-    rgba(255,255,255,0.11),
-    rgba(255,255,255,0.08)
+    rgba(255,255,255,0.05),
+    rgba(255,255,255,0.01)
   );
-  
-  backdrop-filter: blur(25px) saturate(1.1);
-  -webkit-backdrop-filter: blur(21px) saturate(1.1);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
   
   border: 1px solid rgba(255,255,255,0.25);
   
