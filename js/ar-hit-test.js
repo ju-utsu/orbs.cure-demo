@@ -474,3 +474,5 @@
   // expose for debug
   window._arAnchors = { initAR, createOrbEntityAt, anchors, fixedPlacements };
 })();
+
+
