@@ -19,7 +19,8 @@ const musicManager = (function () {
   ];
 
   let audio = null;
-  let index = 0;
+  // ✨ WITH THIS: Pick a random track on load!
+  let index = Math.floor(Math.random() * tracks.length);
   let playing = false;
   const storageKey = 'orbs_bg_vol';
 
@@ -705,7 +706,27 @@ const game = (function () {
     
     if (timeVal) timeVal.textContent = state.roundTime;
     wireUI();
+    
+    // ✨ NEW: The Autoplay Workaround (Starts music on first click/tap anywhere)
+    const unlockAudio = () => {
+      // If it's already playing, do nothing
+      if (musicManager.isPlaying()) return; 
+      
+      try {
+        musicManager.init();
+        musicManager.play();
+      } catch (e) { console.warn('Audio unlock failed:', e); }
+      
+      // Remove listeners immediately so this only runs once!
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+    };
 
+    // Attach the one-time listeners to the whole document
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
+
+    
     
     // 🧠 SAFE XR CHECK
     const arBtn = enterARBtn;
