@@ -19,6 +19,7 @@
   <div id="hud" role="region" aria-label="game heads up display">
     <span>Score: <strong id="scoreVal">0</strong></span>
     <span style="margin:0 8px">|</span>
+    <span>Best: <strong id="bestVal">0</strong></span> <span style="margin:0 8px">|</span>
     <span>Time: <strong id="timeVal">360</strong>s</span>
     <button id="openMenuBtn" title="Open Settings" aria-haspopup="dialog">Settings</button>
   </div>
@@ -167,6 +168,7 @@
       <a-entity position="0 1.1 -1.1">
         <a-plane width="1.0" height="0.7" color="#200" material="opacity:0.95"></a-plane>
         <a-text id="gameOverText" value="GAME OVER" color="#fff" position="-0.4 0.12 0.01" width="2"></a-text>
+        <a-text id="bestScoreText" value="Personal Best: 0" color="#ffd84d" position="-0.4 0.1 0.01" width="1.5"></a-text>
         
         <a-entity 
           position="0 -0.15 0.02"
