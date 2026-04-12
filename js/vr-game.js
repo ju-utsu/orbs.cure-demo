@@ -470,7 +470,7 @@ const game = (function () {
     
     if (restartBtn) restartBtn.addEventListener('click',  () => {
       console.log('Restart clicked');
-      restartGame);
+      restartGame();
     });
       
     if (openMenuBtn) openMenuBtn.addEventListener('click', openMenu);
