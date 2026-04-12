@@ -367,9 +367,20 @@
     hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
 
         // 🫀 Start XR loop
-    renderer.setAnimationLoop((time, frame) => {
-      if (frame) onXRFrame(time, frame);
-    });
+    // 🫀 Safely hook into A-Frame's existing render loop without breaking it
+    const originalRender = renderer.render;
+    renderer.render = function (scene, camera) {
+        // Only run our AR logic if the session is active and we have a frame
+        if (xrSession) {
+            const frame = renderer.xr.getFrame();
+            if (frame) {
+                onXRFrame(performance.now(), frame);
+            }
+        }
+        // Call the original A-Frame renderer so the 3D world still draws!
+        originalRender.call(this, scene, camera);
+    };
+    
 
     setArStatus('AR active — move device to detect surfaces', '#9fffb3');
     showToast('AR started', 1200);
@@ -420,10 +431,20 @@
 
     if (enterARBtn && sceneEl) {
       enterARBtn.addEventListener('click', () => {
-        initAR(); // 👈 attach listener FIRST
+        if (!sceneEl.hasLoaded) {
+           showToast("Scene still loading...");
+           return;
+        }
         
-        if (!sceneEl.is('vr-mode')) {
-          sceneEl.enterVR(); // 🚀 starts AR session
+        // Use A-Frame's system to request AR specifically
+        const xrSystem = sceneEl.systems.webxr;
+        if (xrSystem) {
+            // We tell A-Frame we want AR
+            xrSystem.sessionConfiguration = { mode: 'immersive-ar' };
+            sceneEl.enterVR(); // A-Frame will now request an immersive-ar session
+            initAR(); // Set up our listeners for when the session actually starts
+        } else {
+            showToast("WebXR system not found in A-Frame.");
         }
       });
     }
