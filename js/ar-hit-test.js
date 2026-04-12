@@ -242,6 +242,7 @@
     if(!xrSession){
       console.warn('no xrSession for select');
       return;
+    } // 🚨
 
     // ✨ FIX: Stop Ghost Anchors!
     // Check if the raycaster is aiming at an existing Arcade object. 
