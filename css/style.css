@@ -11,7 +11,7 @@ html, body, a-scene, canvas {
   --panel-bg: rgba(12,16,22,0.55);
   --accent: #1f9cff;
   --accent-2: #6ec1ff;
-  --muted: rgba(255,255,255,0.12);
+  --muted: rgba(255,255,255,0.11);
 }
 
 /* Base page */
@@ -99,7 +99,7 @@ a-scene {
     inset 0 0 20px rgba(255, 255, 255, 0.08);
   background: linear-gradient(
     150deg,
-    rgba(255,255,255,0.16),
+    rgba(255,255,255,0.11),
     rgba(255,255,255,0.08)
   );
   
@@ -157,7 +157,7 @@ a-scene {
     120deg,
     rgba(0,150,255,0.15),
     rgba(255,255,255,0.05),
-    rgba(0,200,255,0.12)
+    rgba(0,200,255,0.11)
   );
   pointer-events:none;
 }
@@ -183,7 +183,7 @@ a-scene {
   width:100%;
   padding:8px 10px;
   border-radius:8px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.11);
   border: 1px solid rgba(255,255,255,0.25);
   color: #fff;
   box-sizing:border-box;
@@ -211,7 +211,7 @@ button.primary{
 #menuOverlay button{
   padding: 8px 12px;
   border-radius:10px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.11);
   border: 1px solid rgba(255,255,255,0.25);
   color:#ffffff;
   backdrop-filter: blur(6px)
@@ -314,7 +314,7 @@ button:focus, input:focus{
               inset 0 0 10px rgba(0,200,255,0.05);
   margin-top: 14px;
   padding: 10px 12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.01));
+  background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.01));
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.25);
   display: flex;
@@ -347,7 +347,7 @@ button:focus, input:focus{
   cursor: pointer;
   font-weight: 700;
   font-size: 13px;
-  box-shadow: 0 4px 10px rgba(31,156,255,0.16);
+  box-shadow: 0 4px 10px rgba(31,156,255,0.11);
   transition: transform 0.18s ease;
 }
 
