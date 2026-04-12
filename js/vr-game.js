@@ -33,7 +33,6 @@ const musicManager = (function () {
     audio.volume = Number.isFinite(saved) ? saved : 0.6;
     audio.addEventListener('play', () => { playing = true; updateUI(); });
     audio.addEventListener('pause', () => { playing = false; updateUI(); });
-    audio.addEventListener('ended', () => { playing = false; next(); });// 👈 2. Add this! It will automatically play the next track.
                                           
     // ✨ NEW: Shuffle play when the track ends
     audio.addEventListener('ended', () => { 
@@ -310,7 +309,6 @@ const game = (function () {
 
     // 🧠 CRITICAL FIX: Allow the restart button to be gazed at even if paused!
     if (kind !== 'restart' && (!state.running || state.paused)) return;
-    if (!state.running || state.paused) return;
 
     // Default UI buttons (like restart) to a 1000ms gaze time
     const ms = kind === 'collect' ? (parseInt(orbInput.value) || state.orbGazeMs) : 
@@ -439,7 +437,6 @@ const game = (function () {
     if (got) got.setAttribute('value', msg);
     showToast(msg);
     openMenu();
-  }
 
   // Refresh raycaster so it notices the newly moved button
   setTimeout(() => {
