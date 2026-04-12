@@ -430,10 +430,9 @@ const game = (function () {
         console.log('VR button clicked');
         
         const scene = document.querySelector('a-scene');
-        
         if (!scene) return;
 
-    //  allow interaction
+    //  allow interaction📱
         document.body.classList.add('scene-interactive');
 
     //  iOS/Android motion permission 
@@ -444,12 +443,12 @@ const game = (function () {
           } catch (e) {}
         }
 
-    // ENTER VR DIRECTLY (no timeout needed)
+    // ENTER/exit VR DIRECTLY (no timeout needed)
         try {
           if (scene.is('vr-mode')) {
             scene.exitVR();
           } else {
-            scene.enterVR(true); // 👈 magic fix
+            scene.enterVR(true); // 👈 mobile magic fix
           }
         } catch (e) {
           console.warn('VR failed:', e);
@@ -470,7 +469,7 @@ const game = (function () {
   document.addEventListener('DOMContentLoaded', () => {
     state.paused = true;
     state.running = false;
-    
+
     try {
       musicManager.init();
     } catch (e) { /* silent */ }
@@ -483,10 +482,36 @@ const game = (function () {
     
     if (timeVal) timeVal.textContent = state.roundTime;
     wireUI();
+
+    
+    // 🧠 SAFE XR CHECK
+    const arBtn = enterARBtn;
+    
+    if (arBtn && navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-ar')
+        .then((supported) => {
+          if (!supported) {
+            enterARBtn.style.display = 'none';
+          }
+        })
+        .catch(() => {
+          arBtn.style.display = 'none';
+        });
+    } else if (arBtn) {
+      arBtn.style.display = 'none';
+    }
   });
+}
+      
 
   // debug helpers
-  window._orbsGame = { startGame, restartGame, state, spawnOrb, spawnDanger, triggerGameOver };
+window._orbsGame = {
+  startGame,
+  restartGame,
+  state,
+  spawnOrb,
+  spawnDanger,
+  triggerGameOver
+};
 
-  return state;
-})();
+return state;
