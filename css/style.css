@@ -214,7 +214,7 @@ button.primary{
   background: rgba(255,255,255,0.11);
   border: 1px solid rgba(255,255,255,0.25);
   color:#ffffff;
-  backdrop-filter: blur(6px)
+  backdrop-filter: blur(6px);
   transition: 0.2s;
   cursor:pointer;
   font-weight:700;
