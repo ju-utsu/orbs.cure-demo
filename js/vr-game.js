@@ -246,8 +246,8 @@ const game = (function () {
     return bad;
   }
 
-  const MAX_ORBS_ON_SCREEN = 16;
-  const MAX_DANGER_ON_SCREEN = 36;
+  const MAX_ORBS_ON_SCREEN = 84;
+  const MAX_DANGER_ON_SCREEN = 63;
 
   function startSpawners() {
     stopSpawners();
