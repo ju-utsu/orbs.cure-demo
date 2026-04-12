@@ -109,6 +109,18 @@ a-scene {
   opacity:1;
   transform:translate(-50%,-50%) scale(1);
   pointer-events:auto;
+  animation: menuFadeIn 0.25s ease;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity:0;
+    transform:translate(-50%,-60%) scale(0.96);
+  }
+  to {
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+  }
 }
 
 
@@ -132,7 +144,7 @@ a-scene {
   opacity:0;
   pointer-events:none;
   transform: translate(-50%,-48%) scale(.995);
- /* display:block; /* keep in DOM for a11y, but visually hidden */
+ /* display:block; keep in DOM for a11y, but visually hidden */
 }
 
 /* menu content */
@@ -215,6 +227,13 @@ button.primary{
   color: #fff;
   border: 1px solid rgba(255,255,255,0.04);
 }
+
+.menu-btn.small:hover {
+  box-shadow: 0 0 10px rgba(0,200,255,0.6);
+  transform: scale(1.08);
+}
+
+
 #menuOverlay hr { opacity: 0.06; margin: 12px 0; }
 
 /* small status line for AR status */
@@ -316,17 +335,6 @@ button:focus, input:focus{
   opacity: 0.95;
 }
 
-
-/* Ensure overlays sit above canvas; allow canvas to be interactive only when needed */
-
-a-scene {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1;
-  pointer-events: auto;
-}
 
 /* Toast top */
 #toast { z-index: 10002; }
