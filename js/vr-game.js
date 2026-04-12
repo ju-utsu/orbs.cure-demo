@@ -124,6 +124,8 @@ const game = (function () {
     running: false,
     paused: true,
     score: 0,
+    highScore: 0,
+    storageKey: 'orbs_cure_highscore',
     mode: 'vr',
     orbGazeMs: 150,
     dangerGazeMs: 500,
@@ -187,8 +189,19 @@ const game = (function () {
   function setScore(v) {
     state.score = v;
     if (scoreVal) scoreVal.textContent = String(v);
+
+    // Update VR HUD
     const vrScore = document.getElementById('vrScore');
     if (vrScore) vrScore.setAttribute('value', `Score: ${v}`);
+
+    // ✨ NEW: High Score Logic
+    if (v > state.highScore) {
+      state.highScore = v;
+      localStorage.setItem(state.storageKey, v);
+      if (document.getElementById('bestVal')) {
+        document.getElementById('bestVal').textContent = String(v);
+      }
+    }
   }
   window.setScore = setScore;
 
@@ -606,6 +619,9 @@ const game = (function () {
     stopSpawners();
     state.timers.forEach(t => clearTimeout(t));
     state.timers.clear();
+
+    const bstTxt = document.getElementById('bestScoreText');
+    if (bstTxt) bstTxt.setAttribute('value', `Personal Best: ${state.highScore}`);
     
     const panel = document.getElementById('gameOverPanel');
     if (panel) {
@@ -725,6 +741,13 @@ const game = (function () {
     // Attach the one-time listeners to the whole document
     document.addEventListener('click', unlockAudio);
     document.addEventListener('touchstart', unlockAudio);
+
+    // ✨ Load High Score from LocalStorage
+    const savedBest = localStorage.getItem(state.highScoreKey || 'orbs_cure_highscore');
+    state.highScore = parseInt(savedBest) || 0;
+    if (document.getElementById('bestVal')) {
+      document.getElementById('bestVal').textContent = String(state.highScore);
+    }
 
     
     
