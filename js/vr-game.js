@@ -1,6 +1,6 @@
 // Music manager + gaze-based VR/AR shared gameplay (validated)
 
-/* ---------------- Music manager ---------------- */
+/* --------------- Music manager ---------------- */
 const musicManager = (function () {
   const basePath = 'assets/audio/';
   const tracks = [
