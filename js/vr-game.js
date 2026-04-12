@@ -133,6 +133,7 @@ const game = (function () {
   const restartBtn = document.getElementById('restartBtn');
   const openMenuBtn = document.getElementById('openMenuBtn');
   const enterVRBtn = document.getElementById('enterVRBtn');
+  const enterARBtn = document.getElementById('enterARBtn');
   const sceneEl = document.querySelector('a-scene');
 
   const sceneRoot = sceneEl;
@@ -513,18 +514,18 @@ const game = (function () {
       arBtn.style.display = 'none';
     }
   });
-}
       
 
-
 // debug helpers
-window._orbsGame = {
-  startGame,
-  restartGame,
-  state,
-  spawnOrb,
-  spawnDanger,
-  triggerGameOver
-};
+  window._orbsGame = {
+    startGame,
+    restartGame,
+    state,
+    spawnOrb,
+    spawnDanger,
+    triggerGameOver
+  };
+  
+  return state;
 
-return state;
+})(); //  This correctly closes and immediately invokes the game module!              
