@@ -487,32 +487,32 @@
           }
         });
       }
-    }
     
     // debug: ?arforce=1 to force the button and debug info
-    try {
-      const u = new URL(window.location.href);
-      if(u.searchParams.get('arforce') === '1'){
-        const dbg = document.createElement('div');
-        dbg.style = 'position:fixed;left:12px;bottom:12px;z-index:99999;padding:8px 10px;background:rgba(0,0,0,0.7);color:#9ff;font-family:monospace;border-radius:8px;white-space:pre-line;font-size:12px;max-width:320px';
-        dbg.textContent = 'AR probe...';
-        document.body.appendChild(dbg);
-        (async ()=>{
-          dbg.textContent = 'navigator.xr: ' + (!!navigator.xr) + '\n';
-          if(navigator.xr && typeof navigator.xr.isSessionSupported === 'function'){
-            try{ const s = await navigator.xr.isSessionSupported('immersive-ar'); dbg.textContent += 'immersive-ar: ' + s + '\n'; } catch(e){ dbg.textContent += 'isSessionSupported error: ' + (e.message||e) + '\n'; }
-          } else dbg.textContent += 'isSessionSupported: N/A\n';
-          if(enterARBtn){ enterARBtn.style.display='inline-block'; enableARBtn('Enter AR'); dbg.textContent += '\nForced AR button visible.'; }
-        })();
-      }
-    } catch(_) {}
-  }
-  
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
-  else setup();
+      try {
+        const u = new URL(window.location.href);
+        if(u.searchParams.get('arforce') === '1'){
+          const dbg = document.createElement('div');
+          dbg.style = 'position:fixed;left:12px;bottom:12px;z-index:99999;padding:8px 10px;background:rgba(0,0,0,0.7);color:#9ff;font-family:monospace;border-radius:8px;white-space:pre-line;font-size:12px;max-width:320px';
+          dbg.textContent = 'AR probe...';
+          document.body.appendChild(dbg);
+          (async ()=>{
+            dbg.textContent = 'navigator.xr: ' + (!!navigator.xr) + '\n';
+            if(navigator.xr && typeof navigator.xr.isSessionSupported === 'function'){
+              try{ const s = await navigator.xr.isSessionSupported('immersive-ar'); dbg.textContent += 'immersive-ar: ' + s + '\n'; } catch(e){ dbg.textContent += 'isSessionSupported error: ' + (e.message||e) + '\n'; }
+            } else dbg.textContent += 'isSessionSupported: N/A\n';
+            if(enterARBtn){ enterARBtn.style.display='inline-block'; enableARBtn('Enter AR'); dbg.textContent += '\nForced AR button visible.'; }
+          })();
+        }
+      } catch(_) {}
+    } // ✅ This correctly closes the setup() function!
+    
+    
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+    else setup();
 
   // expose for debug
-  window._arAnchors = { initAR, createOrbEntityAt, anchors, fixedPlacements };
-})();
-
+    window._arAnchors = { initAR, createOrbEntityAt, anchors, fixedPlacements };
+  })(); 
+// ✅ This correctly closes the entire master IIFE (Immediately Invoked Function Expression)!
 
