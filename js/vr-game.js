@@ -26,16 +26,29 @@ const musicManager = (function () {
   function createAudio() {
     if (audio) return;
     audio = new Audio();
-    audio.loop = true;
+    audio.loop = false;
     audio.crossOrigin = 'anonymous';
     audio.preload = 'auto';
     const saved = parseFloat(localStorage.getItem(storageKey));
     audio.volume = Number.isFinite(saved) ? saved : 0.6;
     audio.addEventListener('play', () => { playing = true; updateUI(); });
     audio.addEventListener('pause', () => { playing = false; updateUI(); });
-    audio.addEventListener('ended', () => { playing = false; updateUI(); });
+    audio.addEventListener('ended', () => { playing = false; next(); });// 👈 2. Add this! It will automatically play the next track.
+                                          
+    // ✨ NEW: Shuffle play when the track ends
+    audio.addEventListener('ended', () => { 
+      let nextIndex;
+      do {
+        // Pick a random track index
+        nextIndex = Math.floor(Math.random() * tracks.length);
+      } while (nextIndex === index && tracks.length > 1); // Ensure it doesn't play the same track twice in a row
+      
+      load(nextIndex);
+      play();
+    });
   }
 
+  
   function updateUI() {
     const btn = document.getElementById('playPauseMusic');
     const sel = document.getElementById('bgSelect');
@@ -288,17 +301,24 @@ const game = (function () {
   function startHover(el) {
     const kind = el && el.dataset && el.dataset.gaze ? el.dataset.gaze : null;
     if (!kind) return;
+    
     if (reticle) {
       reticle.setAttribute('scale', '1.6 1.6 1');
+      // Add blue color for the restart button
       reticle.setAttribute('color', (kind === 'collect') ? '#ffd84d' : '#ff6b6b');
     }
+
+    // 🧠 CRITICAL FIX: Allow the restart button to be gazed at even if paused!
+    if (kind !== 'restart' && (!state.running || state.paused)) return;
     if (!state.running || state.paused) return;
 
-    const ms = (kind === 'collect') ? (parseInt(orbInput.value) || state.orbGazeMs) : (parseInt(dangerInput.value) || state.dangerGazeMs);
+    // Default UI buttons (like restart) to a 1000ms gaze time
+    const ms = kind === 'collect' ? (parseInt(orbInput.value) || state.orbGazeMs) : 
+               kind === 'danger' ? (parseInt(dangerInput.value) || state.dangerGazeMs) : 1000;
 
     const timeout = setTimeout(() => {
-      if (!state.running || state.paused) return;
-      if (!el.parentNode) return;
+      if (kind !== 'restart' && (!state.running || state.paused)) return;
+      if (!el.parentNode && kind !== 'restart') return;
 
       if (kind === 'collect') {
         try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
@@ -309,12 +329,17 @@ const game = (function () {
       } else if (kind === 'danger') {
         try { document.getElementById('dangerSound')?.play()?.catch(()=>{}); } catch (_) {}
         triggerGameOver('Gazed at danger');
+      } else if (kind === 'restart') {
+        // ✨ Trigger restart from inside VR!
+        try { document.getElementById('collectSound')?.play()?.catch(()=>{}); } catch (_) {}
+        restartGame();
       }
     }, ms);
 
     state.timers.set(el, timeout);
   }
 
+  
   function clearHover(el) {
     const to = state.timers.get(el);
     if (to) { clearTimeout(to); state.timers.delete(el); }
