@@ -373,6 +373,12 @@ const game = (function () {
 
   function closeMenuSave() {
     if (!overlay) return;
+
+    // ✨ FIX: Remove browser focus from the clicked button before hiding the menu
+    if (document.activeElement) {
+      document.activeElement.blur(); 
+    }
+    
     overlay.setAttribute('aria-hidden', 'true');
     overlay.style.pointerEvents = 'none';
     state.paused = false;
